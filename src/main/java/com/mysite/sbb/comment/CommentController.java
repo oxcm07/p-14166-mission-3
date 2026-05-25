@@ -43,7 +43,7 @@ public class CommentController {
     public String createQuestionComment(Model model, @PathVariable("id") Integer id,
                                         @Valid CommentForm commentForm, BindingResult bindingResult,
                                         Principal principal,
-                                        @RequestParam(value = "answerPage", defaultValue = "0") int answerPage,
+                                        @RequestParam(value = "answerPage", defaultValue = "1") int answerPage,
                                         @RequestParam(value = "answerSort", defaultValue = "latest") String answerSort) {
         Question question = this.questionService.getQuestion(id);
         if (bindingResult.hasErrors()) {
@@ -62,7 +62,7 @@ public class CommentController {
     public String createAnswerComment(Model model, @PathVariable("id") Integer id,
                                       @Valid CommentForm commentForm, BindingResult bindingResult,
                                       Principal principal,
-                                      @RequestParam(value = "answerPage", defaultValue = "0") int answerPage,
+                                      @RequestParam(value = "answerPage", defaultValue = "1") int answerPage,
                                       @RequestParam(value = "answerSort", defaultValue = "latest") String answerSort) {
         Answer answer = this.answerService.getAnswer(id);
         Question question = answer.getQuestion();
@@ -78,7 +78,7 @@ public class CommentController {
     }
 
     private void addQuestionDetailAttributes(Model model, Question question, int answerPage, String answerSort) {
-        Page<Answer> answerPaging = this.answerService.getList(question, answerPage, answerSort);
+        Page<Answer> answerPaging = this.answerService.getList(question, toZeroBasedPage(answerPage), answerSort);
         Map<Integer, String> answerContentMap = answerPaging.getContent().stream()
                 .collect(Collectors.toMap(Answer::getId, answer -> this.commonUtil.markdown(answer.getContent())));
 
@@ -94,7 +94,7 @@ public class CommentController {
     @GetMapping("/modify/{id}")
     public String commentModify(CommentForm commentForm, @PathVariable("id") Integer id, Principal principal,
                                 Model model,
-                                @RequestParam(value = "answerPage", defaultValue = "0") int answerPage,
+                                @RequestParam(value = "answerPage", defaultValue = "1") int answerPage,
                                 @RequestParam(value = "answerSort", defaultValue = "latest") String answerSort) {
         Comment comment = this.commentService.getComment(id);
         if (!comment.getAuthor().getUsername().equals(principal.getName())) {
@@ -110,7 +110,7 @@ public class CommentController {
     @PostMapping("/modify/{id}")
     public String commentModify(@Valid CommentForm commentForm, BindingResult bindingResult,
                                 @PathVariable("id") Integer id, Principal principal, Model model,
-                                @RequestParam(value = "answerPage", defaultValue = "0") int answerPage,
+                                @RequestParam(value = "answerPage", defaultValue = "1") int answerPage,
                                 @RequestParam(value = "answerSort", defaultValue = "latest") String answerSort) {
         if (bindingResult.hasErrors()) {
             model.addAttribute("answerPage", answerPage);
@@ -129,7 +129,7 @@ public class CommentController {
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/delete/{id}")
     public String commentDelete(Principal principal, @PathVariable("id") Integer id,
-                                @RequestParam(value = "answerPage", defaultValue = "0") int answerPage,
+                                @RequestParam(value = "answerPage", defaultValue = "1") int answerPage,
                                 @RequestParam(value = "answerSort", defaultValue = "latest") String answerSort) {
         Comment comment = this.commentService.getComment(id);
         if (!comment.getAuthor().getUsername().equals(principal.getName())) {
@@ -154,5 +154,9 @@ public class CommentController {
                 : CategoryService.DEFAULT_CATEGORY_CODE;
         long questionNumber = this.questionService.getCategoryQuestionNumber(question);
         return String.format("/question/%s/detail/%s", categoryCode, questionNumber);
+    }
+
+    private int toZeroBasedPage(int page) {
+        return Math.max(page, 1) - 1;
     }
 }

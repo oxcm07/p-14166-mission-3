@@ -8,11 +8,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.List;
-
 public interface AnswerRepository extends JpaRepository<Answer, Integer> {
     Page<Answer> findAllByQuestion(Question question, Pageable pageable);
-    List<Answer> findAllByAuthorOrderByCreateDateDesc(SiteUser author);
+    Page<Answer> findAllByAuthorOrderByCreateDateDesc(SiteUser author, Pageable pageable);
 
     @Query(
             value = "select a from Answer a where a.question = :question order by size(a.voter) desc, a.createDate desc",

@@ -5,10 +5,12 @@ import com.mysite.sbb.answer.Answer;
 import com.mysite.sbb.question.Question;
 import com.mysite.sbb.user.SiteUser;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 @RequiredArgsConstructor
@@ -16,8 +18,9 @@ import java.util.Optional;
 public class CommentService {
     private final CommentRepository commentRepository;
 
-    public List<Comment> getListByAuthor(SiteUser author) {
-        return this.commentRepository.findAllByAuthorOrderByCreateDateDesc(author);
+    public Page<Comment> getListByAuthor(SiteUser author, int page) {
+        Pageable pageable = PageRequest.of(page, 5);
+        return this.commentRepository.findAllByAuthorOrderByCreateDateDesc(author, pageable);
     }
 
     public Comment create(Question question, String content, SiteUser author) {

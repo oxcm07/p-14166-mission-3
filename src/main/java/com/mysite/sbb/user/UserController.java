@@ -11,6 +11,7 @@ import com.mysite.sbb.question.QuestionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -18,10 +19,10 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.security.Principal;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @RequiredArgsConstructor
@@ -71,19 +72,24 @@ public class UserController {
 
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/profile")
-    public String profile(Model model, Principal principal) {
+    public String profile(Model model, Principal principal,
+                          @RequestParam(value = "questionPage", defaultValue = "1") int questionPage,
+                          @RequestParam(value = "answerPage", defaultValue = "1") int answerPage,
+                          @RequestParam(value = "commentPage", defaultValue = "1") int commentPage) {
         SiteUser siteUser = this.userService.getUser(principal.getName());
-        List<Question> questionList = this.questionService.getListByAuthor(siteUser);
-        List<Answer> answerList = this.answerService.getListByAuthor(siteUser);
-        List<Comment> commentList = this.commentService.getListByAuthor(siteUser);
+        Page<Question> questionPaging = this.questionService.getListByAuthor(siteUser, toZeroBasedPage(questionPage));
+        Page<Answer> answerPaging = this.answerService.getListByAuthor(siteUser, toZeroBasedPage(answerPage));
+        Page<Comment> commentPaging = this.commentService.getListByAuthor(siteUser, toZeroBasedPage(commentPage));
 
         Map<Integer, Long> questionNumberMap = new HashMap<>();
         Map<Integer, String> questionCategoryCodeMap = new HashMap<>();
         Map<Integer, Question> commentTargetQuestionMap = new HashMap<>();
 
-        questionList.forEach(question -> addQuestionMeta(question, questionNumberMap, questionCategoryCodeMap));
-        answerList.forEach(answer -> addQuestionMeta(answer.getQuestion(), questionNumberMap, questionCategoryCodeMap));
-        commentList.forEach(comment -> {
+        questionPaging.getContent()
+                .forEach(question -> addQuestionMeta(question, questionNumberMap, questionCategoryCodeMap));
+        answerPaging.getContent()
+                .forEach(answer -> addQuestionMeta(answer.getQuestion(), questionNumberMap, questionCategoryCodeMap));
+        commentPaging.getContent().forEach(comment -> {
             Question targetQuestion = getCommentTargetQuestion(comment);
             if (targetQuestion != null) {
                 commentTargetQuestionMap.put(comment.getId(), targetQuestion);
@@ -92,13 +98,17 @@ public class UserController {
         });
 
         model.addAttribute("siteUser", siteUser);
-        model.addAttribute("questionList", questionList);
-        model.addAttribute("answerList", answerList);
-        model.addAttribute("commentList", commentList);
+        model.addAttribute("questionPaging", questionPaging);
+        model.addAttribute("answerPaging", answerPaging);
+        model.addAttribute("commentPaging", commentPaging);
         model.addAttribute("questionNumberMap", questionNumberMap);
         model.addAttribute("questionCategoryCodeMap", questionCategoryCodeMap);
         model.addAttribute("commentTargetQuestionMap", commentTargetQuestionMap);
         return "profile";
+    }
+
+    private int toZeroBasedPage(int page) {
+        return Math.max(page, 1) - 1;
     }
 
     private void addQuestionMeta(Question question, Map<Integer, Long> questionNumberMap,

@@ -39,7 +39,7 @@ public class AnswerController {
     @PostMapping("/create/{id}")
     public String createAnswer(Model model, @PathVariable("id") Integer id,
                                @Valid AnswerForm answerForm, BindingResult bindingResult, Principal principal,
-                               @RequestParam(value = "answerPage", defaultValue = "0") int answerPage,
+                               @RequestParam(value = "answerPage", defaultValue = "1") int answerPage,
                                @RequestParam(value = "answerSort", defaultValue = "latest") String answerSort) {
         Question question = this.questionService.getQuestion(id);
         SiteUser siteUser = this.userService.getUser(principal.getName());
@@ -54,7 +54,7 @@ public class AnswerController {
     }
     // 컨트롤러에서 마크다운을 HTML로 변환해서 모델에 담아 넘기는 방식
     private void addQuestionDetailAttributes(Model model, Question question, int answerPage, String answerSort) {
-        Page<Answer> answerPaging = this.answerService.getList(question, answerPage, answerSort);
+        Page<Answer> answerPaging = this.answerService.getList(question, toZeroBasedPage(answerPage), answerSort);
         Map<Integer, String> answerContentMap = answerPaging.getContent().stream()
                 .collect(Collectors.toMap(Answer::getId, answer -> this.commonUtil.markdown(answer.getContent())));
 
@@ -73,7 +73,7 @@ public class AnswerController {
     @GetMapping("/modify/{id}")
     public String answerModify(AnswerForm answerForm, @PathVariable("id") Integer id, Principal principal,
                                Model model,
-                               @RequestParam(value = "answerPage", defaultValue = "0") int answerPage,
+                               @RequestParam(value = "answerPage", defaultValue = "1") int answerPage,
                                @RequestParam(value = "answerSort", defaultValue = "latest") String answerSort) {
         Answer answer = this.answerService.getAnswer(id);
         if (!answer.getAuthor().getUsername().equals(principal.getName())) {
@@ -89,7 +89,7 @@ public class AnswerController {
     @PostMapping("/modify/{id}")
     public String answerModify(@Valid AnswerForm answerForm, BindingResult bindingResult,
                                @PathVariable("id") Integer id, Principal principal, Model model,
-                               @RequestParam(value = "answerPage", defaultValue = "0") int answerPage,
+                               @RequestParam(value = "answerPage", defaultValue = "1") int answerPage,
                                @RequestParam(value = "answerSort", defaultValue = "latest") String answerSort) {
         if (bindingResult.hasErrors()) {
             model.addAttribute("answerPage", answerPage);
@@ -108,7 +108,7 @@ public class AnswerController {
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/delete/{id}")
     public String answerDelete(Principal principal, @PathVariable("id") Integer id,
-                               @RequestParam(value = "answerPage", defaultValue = "0") int answerPage,
+                               @RequestParam(value = "answerPage", defaultValue = "1") int answerPage,
                                @RequestParam(value = "answerSort", defaultValue = "latest") String answerSort){
         Answer answer = this.answerService.getAnswer(id);
         if(!answer.getAuthor().getUsername().equals(principal.getName())){
@@ -122,7 +122,7 @@ public class AnswerController {
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/vote/{id}")
     public String answerVote(Principal principal, @PathVariable("id") Integer id,
-                             @RequestParam(value = "answerPage", defaultValue = "0") int answerPage,
+                             @RequestParam(value = "answerPage", defaultValue = "1") int answerPage,
                              @RequestParam(value = "answerSort", defaultValue = "latest") String answerSort){
         Answer answer = this.answerService.getAnswer(id);
         SiteUser siteUser = this.userService.getUser(principal.getName());
@@ -137,5 +137,9 @@ public class AnswerController {
                 : CategoryService.DEFAULT_CATEGORY_CODE;
         long questionNumber = this.questionService.getCategoryQuestionNumber(question);
         return String.format("/question/%s/detail/%s", categoryCode, questionNumber);
+    }
+
+    private int toZeroBasedPage(int page) {
+        return Math.max(page, 1) - 1;
     }
 }

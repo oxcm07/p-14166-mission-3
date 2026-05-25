@@ -53,8 +53,9 @@ public class QuestionService {
         return this.questionRepository.findAll(spec, pageable);
     }
 
-    public List<Question> getListByAuthor(SiteUser author) {
-        return this.questionRepository.findAllByAuthorOrderByCreateDateDesc(author);
+    public Page<Question> getListByAuthor(SiteUser author, int page) {
+        Pageable pageable = PageRequest.of(page, 5);
+        return this.questionRepository.findAllByAuthorOrderByCreateDateDesc(author, pageable);
     }
 
     public Question getQuestion(Integer id) {

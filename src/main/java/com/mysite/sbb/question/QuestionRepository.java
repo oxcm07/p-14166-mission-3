@@ -11,12 +11,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
-import java.util.List;
-
 public interface QuestionRepository extends JpaRepository<Question, Integer> {
     Page<Question> findAll(Specification<Question> spec, Pageable pageable);
     Page<Question> findAllByCategory(Category category, Pageable pageable);
-    List<Question> findAllByAuthorOrderByCreateDateDesc(SiteUser author);
+    Page<Question> findAllByAuthorOrderByCreateDateDesc(SiteUser author, Pageable pageable);
     long countByCategory(Category category);
 
     @Query("""

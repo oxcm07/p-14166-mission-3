@@ -140,6 +140,26 @@ class SbbApplicationTests {
 	}
 
 	@Test
+	void questionListPageNumbersStartFromOne() throws Exception {
+		SiteUser author = createUser();
+		Category qna = category("qna");
+		for (int i = 0; i < 11; i++) {
+			createQuestion("페이지 번호 질문 " + i, "페이지 번호 내용 " + i, qna, author, i);
+		}
+
+		mockMvc.perform(get("/question/qna/list"))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("data-page=\"1\">1</a>")))
+				.andExpect(content().string(containsString("data-page=\"2\">2</a>")))
+				.andExpect(content().string(not(containsString("data-page=\"0\""))));
+
+		mockMvc.perform(get("/question/qna/list").param("page", "2"))
+				.andExpect(status().isOk())
+				.andExpect(model().attributeExists("paging"))
+				.andExpect(content().string(containsString("data-page=\"2\">2</a>")));
+	}
+
+	@Test
 	void questionDetailUsesCategoryQuestionNumber() throws Exception {
 		SiteUser author = createUser();
 		Category qna = category("qna");
@@ -153,6 +173,25 @@ class SbbApplicationTests {
 				.andExpect(model().attribute("question", secondQuestion))
 				.andExpect(content().string(containsString("두번째 질문")))
 				.andExpect(content().string(not(containsString("첫번째 질문"))));
+	}
+
+	@Test
+	void questionDetailAnswerPageNumbersStartFromOne() throws Exception {
+		SiteUser author = createUser();
+		Question question = createQuestion("답변 페이지 질문", "질문 내용", category("qna"), author, 0);
+		for (int i = 1; i <= 6; i++) {
+			answerService.create(question, "답변 페이지 답변 " + i, author);
+		}
+
+		mockMvc.perform(get("/question/qna/detail/1"))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("data-page=\"1\">1</a>")))
+				.andExpect(content().string(containsString("data-page=\"2\">2</a>")))
+				.andExpect(content().string(not(containsString("data-page=\"0\""))));
+
+		mockMvc.perform(get("/question/qna/detail/1").param("answerPage", "2"))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("id=\"answerPage\" name=\"answerPage\" value=\"2\"")));
 	}
 
 	@Test
@@ -219,7 +258,7 @@ class SbbApplicationTests {
 						.with(user(TEST_USERNAME))
 						.with(csrf()))
 				.andExpect(status().is3xxRedirection())
-				.andExpect(header().string("Location", containsString("/question/qna/detail/1?answerPage=0&answerSort=latest#answer_")));
+				.andExpect(header().string("Location", containsString("/question/qna/detail/1?answerPage=1&answerSort=latest#answer_")));
 
 		Answer answer = answerRepository.findAll().get(0);
 		assertThat(answer.getContent()).isEqualTo("답변 테스트 내용");
@@ -237,7 +276,7 @@ class SbbApplicationTests {
 						.with(user(TEST_USERNAME))
 						.with(csrf()))
 				.andExpect(status().is3xxRedirection())
-				.andExpect(header().string("Location", containsString("/question/qna/detail/1?answerPage=0&answerSort=latest#comment_")));
+				.andExpect(header().string("Location", containsString("/question/qna/detail/1?answerPage=1&answerSort=latest#comment_")));
 
 		Comment comment = commentRepository.findAll().get(0);
 		assertThat(comment.getContent()).isEqualTo("질문 댓글 내용");
@@ -256,7 +295,7 @@ class SbbApplicationTests {
 						.with(user(TEST_USERNAME))
 						.with(csrf()))
 				.andExpect(status().is3xxRedirection())
-				.andExpect(header().string("Location", containsString("/question/qna/detail/1?answerPage=0&answerSort=latest#comment_")));
+				.andExpect(header().string("Location", containsString("/question/qna/detail/1?answerPage=1&answerSort=latest#comment_")));
 
 		Comment comment = commentRepository.findAll().get(0);
 		assertThat(comment.getContent()).isEqualTo("답변 댓글 내용");
@@ -391,13 +430,39 @@ class SbbApplicationTests {
 		mockMvc.perform(get("/user/profile").with(user(TEST_USERNAME)))
 				.andExpect(status().isOk())
 				.andExpect(view().name("profile"))
-				.andExpect(model().attributeExists("siteUser", "questionList", "answerList", "commentList",
+				.andExpect(model().attributeExists("siteUser", "questionPaging", "answerPaging", "commentPaging",
 						"questionNumberMap", "questionCategoryCodeMap", "commentTargetQuestionMap"))
 				.andExpect(content().string(containsString("내 프로필")))
+				.andExpect(content().string(not(containsString("Page=0"))))
 				.andExpect(content().string(containsString("프로필 질문")))
 				.andExpect(content().string(containsString("프로필 답변 내용")))
 				.andExpect(content().string(containsString("프로필 질문 댓글")))
 				.andExpect(content().string(containsString("프로필 답변 댓글")));
+	}
+
+	@Test
+	void profilePaginatesActivityListsIndependently() throws Exception {
+		SiteUser author = createUser();
+		Question question = createQuestion("프로필 페이지 질문 원본", "프로필 질문 내용", category("qna"), author, 0);
+		for (int i = 1; i <= 6; i++) {
+			createQuestion("프로필 페이지 질문 " + i, "프로필 질문 내용 " + i, category("qna"), author, i);
+			answerService.create(question, "프로필 페이지 답변 " + i, author);
+			commentService.create(question, "프로필 페이지 댓글 " + i, author);
+		}
+
+		mockMvc.perform(get("/user/profile")
+						.param("questionPage", "2")
+						.param("answerPage", "2")
+						.param("commentPage", "2")
+						.with(user(TEST_USERNAME)))
+				.andExpect(status().isOk())
+				.andExpect(view().name("profile"))
+				.andExpect(content().string(containsString("questionPage=2&amp;answerPage=2&amp;commentPage=1")))
+				.andExpect(content().string(containsString("questionPage=2&amp;answerPage=1&amp;commentPage=2")))
+				.andExpect(content().string(containsString("questionPage=1&amp;answerPage=2&amp;commentPage=2")))
+				.andExpect(content().string(containsString("프로필 페이지 질문 원본")))
+				.andExpect(content().string(containsString("프로필 페이지 답변 1")))
+				.andExpect(content().string(containsString("프로필 페이지 댓글 1")));
 	}
 
 	@Test

@@ -48,17 +48,17 @@
     <div th:if="${!paging.isEmpty()}">
         <ul class="pagination justify-content-center">
             <li class="page-item" th:classappend="${!paging.hasPrevious} ? 'disabled'">
-                <a class="page-link" href="javascript:void(0)" th:data-page="${paging.number-1}">
+                <a class="page-link" href="javascript:void(0)" th:data-page="${paging.hasPrevious ? paging.number : 1}">
                     <span>이전</span>
                 </a>
             </li>
             <li th:each="page: ${#numbers.sequence(0, paging.totalPages-1)}"
                 th:if="${page >= paging.number-5 and page <= paging.number+5}"
                 th:classappend="${page == paging.number} ? 'active'" class="page-item">
-                <a th:text="${page}" class="page-link" href="javascript:void(0)" th:data-page="${page}"></a>
+                <a th:text="${page + 1}" class="page-link" href="javascript:void(0)" th:data-page="${page + 1}"></a>
             </li>
             <li class="page-item" th:classappend="${!paging.hasNext} ? 'disabled'">
-                <a class="page-link" href="javascript:void(0)" th:data-page="${paging.number+1}">
+                <a class="page-link" href="javascript:void(0)" th:data-page="${paging.number + 2}">
                     <span>다음</span>
                 </a>
             </li>
@@ -68,7 +68,7 @@
     <!--게시물 목록을 조회할 때는 GET 방식을 사용-->
     <form th:action="@{/question/{code}/list(code=${category.code})}" method="get" id="searchForm">
         <input type="hidden" id="kw" name="kw" th:value="${kw}">
-        <input type="hidden" id="page" name="page" th:value="${paging.number}">
+        <input type="hidden" id="page" name="page" th:value="${paging.number + 1}">
     </form>
 </div>
 <script layout:fragment="script" type='text/javascript'>
@@ -82,7 +82,7 @@
     const btn_search = document.getElementById("btn_search");
     btn_search.addEventListener('click', function() {
         document.getElementById('kw').value = document.getElementById('search_kw').value;
-        document.getElementById('page').value = 0;  // 검색버튼을 클릭할 경우 0페이지부터 조회한다.
+        document.getElementById('page').value = 1;  // 검색버튼을 클릭할 경우 1페이지부터 조회한다.
         document.getElementById('searchForm').submit();
     });
 </script>

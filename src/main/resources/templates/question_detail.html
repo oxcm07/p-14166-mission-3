@@ -46,19 +46,19 @@
                         <span class="small text-muted" th:if="${comment.modifyDate != null}">수정됨</span>
                         <span class="small text-muted" th:if="${comment.author != null}" th:text="${comment.author.username}"></span>
                         <span class="small text-muted" th:text="${#temporals.format(comment.createDate, 'yyyy-MM-dd HH:mm')}"></span>
-                        <a th:href="@{/comment/modify/{id}(id=${comment.id}, answerPage=${answerPaging.number}, answerSort=${answerSort})}"
+                        <a th:href="@{/comment/modify/{id}(id=${comment.id}, answerPage=${answerPaging.number + 1}, answerSort=${answerSort})}"
                            class="btn btn-sm btn-outline-secondary"
                            sec:authorize="isAuthenticated()"
                            th:if="${comment.author != null and #authentication.getPrincipal().getUsername() == comment.author.username}">수정</a>
                         <a href="javascript:void(0);"
-                           th:data-uri="@{/comment/delete/{id}(id=${comment.id}, answerPage=${answerPaging.number}, answerSort=${answerSort})}"
+                           th:data-uri="@{/comment/delete/{id}(id=${comment.id}, answerPage=${answerPaging.number + 1}, answerSort=${answerSort})}"
                            class="delete btn btn-sm btn-outline-secondary"
                            sec:authorize="isAuthenticated()"
                            th:if="${comment.author != null and #authentication.getPrincipal().getUsername() == comment.author.username}">삭제</a>
                     </div>
                 </div>
                 <form sec:authorize="isAuthenticated()"
-                      th:action="@{/comment/create/question/{id}(id=${question.id}, answerPage=${answerPaging.number}, answerSort=${answerSort})}"
+                      th:action="@{/comment/create/question/{id}(id=${question.id}, answerPage=${answerPaging.number + 1}, answerSort=${answerSort})}"
                       method="post" class="mt-2">
                     <textarea name="content" class="form-control" rows="2" placeholder="댓글을 입력하세요" required></textarea>
                     <input type="submit" value="댓글등록" class="btn btn-sm btn-outline-secondary mt-2">
@@ -95,16 +95,16 @@
             </div>
             <div class="my-3">
                 <a href="javascript:void(0);" class="recommend btn btn-sm btn-outline-secondary"
-                   th:data-uri="@{/answer/vote/{id}(id=${answer.id}, answerPage=${answerPaging.number}, answerSort=${answerSort})}">
+                   th:data-uri="@{/answer/vote/{id}(id=${answer.id}, answerPage=${answerPaging.number + 1}, answerSort=${answerSort})}">
                     추천
                     <span class="badge rounded-pill bg-success" th:text="${#lists.size(answer.voter)}"></span>
                 </a>
-                <a th:href="@{/answer/modify/{id}(id=${answer.id}, answerPage=${answerPaging.number}, answerSort=${answerSort})}"
+                <a th:href="@{/answer/modify/{id}(id=${answer.id}, answerPage=${answerPaging.number + 1}, answerSort=${answerSort})}"
                    class="btn btn-sm btn-outline-secondary"
                    sec:authorize="isAuthenticated()"
                    th:if="${answer.author != null and #authentication.getPrincipal().getUsername() == answer.author.username}">수정</a>
                 <a href="javascript:void(0);"
-                   th:data-uri="@{/answer/delete/{id}(id=${answer.id}, answerPage=${answerPaging.number}, answerSort=${answerSort})}"
+                   th:data-uri="@{/answer/delete/{id}(id=${answer.id}, answerPage=${answerPaging.number + 1}, answerSort=${answerSort})}"
                    class="delete btn btn-sm btn-outline-secondary" sec:authorize="isAuthenticated()"
                    th:if="${answer.author != null and #authentication.getPrincipal().getUsername() == answer.author.username}">삭제</a>
             </div>
@@ -117,19 +117,19 @@
                         <span class="small text-muted" th:if="${comment.modifyDate != null}">수정됨</span>
                         <span class="small text-muted" th:if="${comment.author != null}" th:text="${comment.author.username}"></span>
                         <span class="small text-muted" th:text="${#temporals.format(comment.createDate, 'yyyy-MM-dd HH:mm')}"></span>
-                        <a th:href="@{/comment/modify/{id}(id=${comment.id}, answerPage=${answerPaging.number}, answerSort=${answerSort})}"
+                        <a th:href="@{/comment/modify/{id}(id=${comment.id}, answerPage=${answerPaging.number + 1}, answerSort=${answerSort})}"
                            class="btn btn-sm btn-outline-secondary"
                            sec:authorize="isAuthenticated()"
                            th:if="${comment.author != null and #authentication.getPrincipal().getUsername() == comment.author.username}">수정</a>
                         <a href="javascript:void(0);"
-                           th:data-uri="@{/comment/delete/{id}(id=${comment.id}, answerPage=${answerPaging.number}, answerSort=${answerSort})}"
+                           th:data-uri="@{/comment/delete/{id}(id=${comment.id}, answerPage=${answerPaging.number + 1}, answerSort=${answerSort})}"
                            class="delete btn btn-sm btn-outline-secondary"
                            sec:authorize="isAuthenticated()"
                            th:if="${comment.author != null and #authentication.getPrincipal().getUsername() == comment.author.username}">삭제</a>
                     </div>
                 </div>
                 <form sec:authorize="isAuthenticated()"
-                      th:action="@{/comment/create/answer/{id}(id=${answer.id}, answerPage=${answerPaging.number}, answerSort=${answerSort})}"
+                      th:action="@{/comment/create/answer/{id}(id=${answer.id}, answerPage=${answerPaging.number + 1}, answerSort=${answerSort})}"
                       method="post" class="mt-2">
                     <textarea name="content" class="form-control" rows="2" placeholder="댓글을 입력하세요" required></textarea>
                     <input type="submit" value="댓글등록" class="btn btn-sm btn-outline-secondary mt-2">
@@ -142,17 +142,17 @@
     <div th:if="${!answerPaging.isEmpty()}">
         <ul class="pagination justify-content-center">
             <li class="page-item" th:classappend="${!answerPaging.hasPrevious} ? 'disabled'">
-                <a class="page-link answer-page-link" href="javascript:void(0)" th:data-page="${answerPaging.number-1}">
+                <a class="page-link answer-page-link" href="javascript:void(0)" th:data-page="${answerPaging.hasPrevious ? answerPaging.number : 1}">
                     <span>이전</span>
                 </a>
             </li>
             <li th:each="page: ${#numbers.sequence(0, answerPaging.totalPages-1)}"
                 th:if="${page >= answerPaging.number-5 and page <= answerPaging.number+5}"
                 th:classappend="${page == answerPaging.number} ? 'active'" class="page-item">
-                <a th:text="${page}" class="page-link answer-page-link" href="javascript:void(0)" th:data-page="${page}"></a>
+                <a th:text="${page + 1}" class="page-link answer-page-link" href="javascript:void(0)" th:data-page="${page + 1}"></a>
             </li>
             <li class="page-item" th:classappend="${!answerPaging.hasNext} ? 'disabled'">
-                <a class="page-link answer-page-link" href="javascript:void(0)" th:data-page="${answerPaging.number+1}">
+                <a class="page-link answer-page-link" href="javascript:void(0)" th:data-page="${answerPaging.number + 2}">
                     <span>다음</span>
                 </a>
             </li>
@@ -160,12 +160,12 @@
     </div>
     <!-- 답변 페이징처리 끝 -->
     <form th:action="@{/question/{code}/detail/{number}(code=${question.category.code}, number=${questionNumber})}" method="get" id="answerSearchForm">
-        <input type="hidden" id="answerPage" name="answerPage" th:value="${answerPaging.number}">
+        <input type="hidden" id="answerPage" name="answerPage" th:value="${answerPaging.number + 1}">
         <input type="hidden" id="answerSort" name="answerSort" th:value="${answerSort}">
     </form>
     <!-- 답변 작성 -->
     <form th:action="@{|/answer/create/${question.id}|}" th:object="${answerForm}" method="post" class="my-3">
-        <input type="hidden" name="answerPage" th:value="${answerPaging.number}">
+        <input type="hidden" name="answerPage" th:value="${answerPaging.number + 1}">
         <input type="hidden" name="answerSort" th:value="${answerSort}">
         <div th:replace="~{form_errors :: formErrorsFragment}"></div>
         <textarea sec:authorize="isAnonymous()" disabled th:field="*{content}" class="form-control" rows="10"></textarea>
@@ -200,7 +200,7 @@
     const answer_sort = document.getElementById("answer_sort");
     answer_sort.addEventListener('change', function() {
         document.getElementById('answerSort').value = this.value;
-        document.getElementById('answerPage').value = 0;
+        document.getElementById('answerPage').value = 1;
         document.getElementById('answerSearchForm').submit();
     });
 </script>

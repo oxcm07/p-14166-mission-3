@@ -23,15 +23,15 @@
                     <div class="card-body">
                         <div class="row text-center">
                             <div class="col">
-                                <div class="fs-4 fw-bold" th:text="${#lists.size(questionList)}"></div>
+                                <div class="fs-4 fw-bold" th:text="${questionPaging.totalElements}"></div>
                                 <div class="text-muted">질문</div>
                             </div>
                             <div class="col">
-                                <div class="fs-4 fw-bold" th:text="${#lists.size(answerList)}"></div>
+                                <div class="fs-4 fw-bold" th:text="${answerPaging.totalElements}"></div>
                                 <div class="text-muted">답변</div>
                             </div>
                             <div class="col">
-                                <div class="fs-4 fw-bold" th:text="${#lists.size(commentList)}"></div>
+                                <div class="fs-4 fw-bold" th:text="${commentPaging.totalElements}"></div>
                                 <div class="text-muted">댓글</div>
                             </div>
                         </div>
@@ -44,11 +44,11 @@
     <section class="mb-5">
         <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
             <h4 class="mb-0">작성한 질문</h4>
-            <span class="text-muted small" th:text="|${#lists.size(questionList)}개|"></span>
+            <span class="text-muted small" th:text="|${questionPaging.totalElements}개|"></span>
         </div>
-        <div class="list-group" th:if="${!#lists.isEmpty(questionList)}">
+        <div class="list-group" th:if="${!questionPaging.isEmpty()}">
             <a class="list-group-item list-group-item-action"
-               th:each="question : ${questionList}"
+               th:each="question : ${questionPaging}"
                th:href="@{/question/{code}/detail/{number}(code=${questionCategoryCodeMap[question.id]}, number=${questionNumberMap[question.id]})}">
                 <div class="d-flex w-100 justify-content-between gap-3">
                     <h6 class="mb-1 text-truncate" th:text="${question.subject}"></h6>
@@ -62,17 +62,37 @@
                 </div>
             </a>
         </div>
-        <div class="text-muted py-3" th:if="${#lists.isEmpty(questionList)}">작성한 질문이 없습니다.</div>
+        <div class="text-muted py-3" th:if="${questionPaging.isEmpty()}">작성한 질문이 없습니다.</div>
+        <div th:if="${!questionPaging.isEmpty()}">
+            <ul class="pagination justify-content-center mt-3">
+                <li class="page-item" th:classappend="${!questionPaging.hasPrevious} ? 'disabled'">
+                    <a class="page-link"
+                       th:href="@{/user/profile(questionPage=${questionPaging.hasPrevious ? questionPaging.number : 1}, answerPage=${answerPaging.number + 1}, commentPage=${commentPaging.number + 1})}">이전</a>
+                </li>
+                <li th:each="page : ${#numbers.sequence(0, questionPaging.totalPages - 1)}"
+                    th:if="${page >= questionPaging.number - 5 and page <= questionPaging.number + 5}"
+                    th:classappend="${page == questionPaging.number} ? 'active'"
+                    class="page-item">
+                    <a class="page-link"
+                       th:text="${page + 1}"
+                       th:href="@{/user/profile(questionPage=${page + 1}, answerPage=${answerPaging.number + 1}, commentPage=${commentPaging.number + 1})}"></a>
+                </li>
+                <li class="page-item" th:classappend="${!questionPaging.hasNext} ? 'disabled'">
+                    <a class="page-link"
+                       th:href="@{/user/profile(questionPage=${questionPaging.number + 2}, answerPage=${answerPaging.number + 1}, commentPage=${commentPaging.number + 1})}">다음</a>
+                </li>
+            </ul>
+        </div>
     </section>
 
     <section class="mb-5">
         <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
             <h4 class="mb-0">작성한 답변</h4>
-            <span class="text-muted small" th:text="|${#lists.size(answerList)}개|"></span>
+            <span class="text-muted small" th:text="|${answerPaging.totalElements}개|"></span>
         </div>
-        <div class="list-group" th:if="${!#lists.isEmpty(answerList)}">
+        <div class="list-group" th:if="${!answerPaging.isEmpty()}">
             <a class="list-group-item list-group-item-action"
-               th:each="answer : ${answerList}"
+               th:each="answer : ${answerPaging}"
                th:href="@{/question/{code}/detail/{number}(code=${questionCategoryCodeMap[answer.question.id]}, number=${questionNumberMap[answer.question.id]})} + '#answer_' + ${answer.id}">
                 <div class="d-flex w-100 justify-content-between gap-3">
                     <h6 class="mb-1 text-truncate" th:text="${answer.question.subject}"></h6>
@@ -83,17 +103,37 @@
                 <div class="small text-muted" th:text="|추천 ${#lists.size(answer.voter)}개|"></div>
             </a>
         </div>
-        <div class="text-muted py-3" th:if="${#lists.isEmpty(answerList)}">작성한 답변이 없습니다.</div>
+        <div class="text-muted py-3" th:if="${answerPaging.isEmpty()}">작성한 답변이 없습니다.</div>
+        <div th:if="${!answerPaging.isEmpty()}">
+            <ul class="pagination justify-content-center mt-3">
+                <li class="page-item" th:classappend="${!answerPaging.hasPrevious} ? 'disabled'">
+                    <a class="page-link"
+                       th:href="@{/user/profile(questionPage=${questionPaging.number + 1}, answerPage=${answerPaging.hasPrevious ? answerPaging.number : 1}, commentPage=${commentPaging.number + 1})}">이전</a>
+                </li>
+                <li th:each="page : ${#numbers.sequence(0, answerPaging.totalPages - 1)}"
+                    th:if="${page >= answerPaging.number - 5 and page <= answerPaging.number + 5}"
+                    th:classappend="${page == answerPaging.number} ? 'active'"
+                    class="page-item">
+                    <a class="page-link"
+                       th:text="${page + 1}"
+                       th:href="@{/user/profile(questionPage=${questionPaging.number + 1}, answerPage=${page + 1}, commentPage=${commentPaging.number + 1})}"></a>
+                </li>
+                <li class="page-item" th:classappend="${!answerPaging.hasNext} ? 'disabled'">
+                    <a class="page-link"
+                       th:href="@{/user/profile(questionPage=${questionPaging.number + 1}, answerPage=${answerPaging.number + 2}, commentPage=${commentPaging.number + 1})}">다음</a>
+                </li>
+            </ul>
+        </div>
     </section>
 
     <section>
         <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
             <h4 class="mb-0">작성한 댓글</h4>
-            <span class="text-muted small" th:text="|${#lists.size(commentList)}개|"></span>
+            <span class="text-muted small" th:text="|${commentPaging.totalElements}개|"></span>
         </div>
-        <div class="list-group" th:if="${!#lists.isEmpty(commentList)}">
+        <div class="list-group" th:if="${!commentPaging.isEmpty()}">
             <a class="list-group-item list-group-item-action"
-               th:each="comment : ${commentList}"
+               th:each="comment : ${commentPaging}"
                th:with="targetQuestion=${commentTargetQuestionMap[comment.id]}"
                th:href="${targetQuestion != null} ? @{/question/{code}/detail/{number}(code=${questionCategoryCodeMap[targetQuestion.id]}, number=${questionNumberMap[targetQuestion.id]})} + '#comment_' + ${comment.id} : '#'">
                 <div class="d-flex w-100 justify-content-between gap-3">
@@ -106,7 +146,27 @@
                 <div class="small text-muted" th:text="${comment.question != null ? '질문 댓글' : '답변 댓글'}"></div>
             </a>
         </div>
-        <div class="text-muted py-3" th:if="${#lists.isEmpty(commentList)}">작성한 댓글이 없습니다.</div>
+        <div class="text-muted py-3" th:if="${commentPaging.isEmpty()}">작성한 댓글이 없습니다.</div>
+        <div th:if="${!commentPaging.isEmpty()}">
+            <ul class="pagination justify-content-center mt-3">
+                <li class="page-item" th:classappend="${!commentPaging.hasPrevious} ? 'disabled'">
+                    <a class="page-link"
+                       th:href="@{/user/profile(questionPage=${questionPaging.number + 1}, answerPage=${answerPaging.number + 1}, commentPage=${commentPaging.hasPrevious ? commentPaging.number : 1})}">이전</a>
+                </li>
+                <li th:each="page : ${#numbers.sequence(0, commentPaging.totalPages - 1)}"
+                    th:if="${page >= commentPaging.number - 5 and page <= commentPaging.number + 5}"
+                    th:classappend="${page == commentPaging.number} ? 'active'"
+                    class="page-item">
+                    <a class="page-link"
+                       th:text="${page + 1}"
+                       th:href="@{/user/profile(questionPage=${questionPaging.number + 1}, answerPage=${answerPaging.number + 1}, commentPage=${page + 1})}"></a>
+                </li>
+                <li class="page-item" th:classappend="${!commentPaging.hasNext} ? 'disabled'">
+                    <a class="page-link"
+                       th:href="@{/user/profile(questionPage=${questionPaging.number + 1}, answerPage=${answerPaging.number + 1}, commentPage=${commentPaging.number + 2})}">다음</a>
+                </li>
+            </ul>
+        </div>
     </section>
 </div>
 </html>

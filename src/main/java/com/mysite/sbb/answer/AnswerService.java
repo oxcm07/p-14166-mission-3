@@ -36,8 +36,9 @@ public class AnswerService {
         return this.answerRepository.findAllByQuestion(question, pageable);
     }
 
-    public List<Answer> getListByAuthor(SiteUser author) {
-        return this.answerRepository.findAllByAuthorOrderByCreateDateDesc(author);
+    public Page<Answer> getListByAuthor(SiteUser author, int page) {
+        Pageable pageable = PageRequest.of(page, 5);
+        return this.answerRepository.findAllByAuthorOrderByCreateDateDesc(author, pageable);
     }
 
     public Answer create(Question question, String content, SiteUser author) {

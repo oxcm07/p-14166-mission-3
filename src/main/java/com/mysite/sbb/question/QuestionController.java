@@ -35,11 +35,11 @@ public class QuestionController {
     private final CommonUtil commonUtil;
 
     @GetMapping("/{categoryCode}/list")
-    public String list(Model model, @RequestParam(value = "page", defaultValue = "0") int page,
+    public String list(Model model, @RequestParam(value = "page", defaultValue = "1") int page,
                        @RequestParam(value = "kw", defaultValue = "") String kw,
                        @PathVariable("categoryCode") String categoryCode) {
         Category category = this.categoryService.getCategory(categoryCode);
-        Page<Question> paging = this.questionService.getList(page, kw, category);
+        Page<Question> paging = this.questionService.getList(toZeroBasedPage(page), kw, category);
         Map<Integer, Long> questionNumberMap = paging.getContent().stream()
                 .collect(Collectors.toMap(Question::getId, this.questionService::getCategoryQuestionNumber));
         model.addAttribute("paging", paging);
@@ -50,11 +50,15 @@ public class QuestionController {
         return "question_list";
     }
 
+    private int toZeroBasedPage(int page) {
+        return Math.max(page, 1) - 1;
+    }
+
     @GetMapping(value = "/{categoryCode}/detail/{questionNumber}")
     public String detail(Model model, @PathVariable("categoryCode") String categoryCode,
                          @PathVariable("questionNumber") int questionNumber,
                          AnswerForm answerForm, CommentForm commentForm,
-                         @RequestParam(value = "answerPage", defaultValue = "0") int answerPage,
+                         @RequestParam(value = "answerPage", defaultValue = "1") int answerPage,
                          @RequestParam(value = "answerSort", defaultValue = "latest") String answerSort) {
         Category category = this.categoryService.getCategory(categoryCode);
         Question question = this.questionService.getQuestion(category, questionNumber);
@@ -63,7 +67,7 @@ public class QuestionController {
     }
 
     private void addQuestionDetailAttributes(Model model, Question question, int answerPage, String answerSort) {
-        Page<Answer> answerPaging = this.answerService.getList(question, answerPage, answerSort);
+        Page<Answer> answerPaging = this.answerService.getList(question, toZeroBasedPage(answerPage), answerSort);
         Map<Integer, String> answerContentMap = answerPaging.getContent().stream()
                 .collect(Collectors.toMap(Answer::getId, answer -> this.commonUtil.markdown(answer.getContent())));
 
