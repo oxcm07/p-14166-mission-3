@@ -15,21 +15,25 @@
             <th style="width:50%">제목</th>
             <th>글쓴이</th>
             <th>작성일시</th>
+            <th>추천</th>
         </tr>
         </thead>
         <tbody>
         <tr class="text-center" th:each="question, loop : ${paging}">
             <td th:text="${questionNumberMap[question.id]}"></td>
             <td class="text-start">
-                <a th:href="@{/question/{code}/detail/{number}(code=${category.code}, number=${questionNumberMap[question.id]})}"
-                   th:text="${question.subject}"></a>
-                <span class="text-danger small ms-2"
-                      th:if="${#lists.size(question.answerList) > 0}"
-                      th:text="${#lists.size(question.answerList)}">
-                    </span>
+                <div>
+                    <a th:href="@{/question/{code}/detail/{number}(code=${category.code}, number=${questionNumberMap[question.id]})}"
+                       th:text="${question.subject}"></a>
+                </div>
+                <div class="small text-muted mt-1">
+                    <span th:text="|답변 : ${#lists.size(question.answerList)}|"></span>
+                    <span class="ms-2" th:text="|댓글 : ${#lists.size(question.commentList)}|"></span>
+                </div>
             </td>
             <td><span th:if="${question.author != null}" th:text="${question.author.username}"></span></td>
             <td th:text="${#temporals.format(question.createDate, 'yyyy-MM-dd HH:mm')}"></td>
+            <td th:text="${#lists.size(question.voter)}"></td>
         </tr>
         </tbody>
     </table>
