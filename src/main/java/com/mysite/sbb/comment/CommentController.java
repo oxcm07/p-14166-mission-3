@@ -4,6 +4,7 @@ import com.mysite.sbb.CommonUtil;
 import com.mysite.sbb.answer.Answer;
 import com.mysite.sbb.answer.AnswerForm;
 import com.mysite.sbb.answer.AnswerService;
+import com.mysite.sbb.category.CategoryService;
 import com.mysite.sbb.question.Question;
 import com.mysite.sbb.question.QuestionService;
 import com.mysite.sbb.user.SiteUser;
@@ -52,8 +53,8 @@ public class CommentController {
         }
         SiteUser siteUser = this.userService.getUser(principal.getName());
         Comment comment = this.commentService.create(question, commentForm.getContent(), siteUser);
-        return String.format("redirect:/question/detail/%s?answerPage=%s&answerSort=%s#comment_%s",
-                question.getId(), answerPage, answerSort, comment.getId());
+        return String.format("redirect:%s?answerPage=%s&answerSort=%s#comment_%s",
+                getQuestionDetailUrl(question), answerPage, answerSort, comment.getId());
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -72,8 +73,8 @@ public class CommentController {
         }
         SiteUser siteUser = this.userService.getUser(principal.getName());
         Comment comment = this.commentService.create(answer, commentForm.getContent(), siteUser);
-        return String.format("redirect:/question/detail/%s?answerPage=%s&answerSort=%s#comment_%s",
-                question.getId(), answerPage, answerSort, comment.getId());
+        return String.format("redirect:%s?answerPage=%s&answerSort=%s#comment_%s",
+                getQuestionDetailUrl(question), answerPage, answerSort, comment.getId());
     }
 
     private void addQuestionDetailAttributes(Model model, Question question, int answerPage, String answerSort) {
@@ -86,6 +87,7 @@ public class CommentController {
         model.addAttribute("answerPaging", answerPaging);
         model.addAttribute("answerContentMap", answerContentMap);
         model.addAttribute("answerSort", answerSort);
+        model.addAttribute("questionNumber", this.questionService.getCategoryQuestionNumber(question));
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -120,8 +122,8 @@ public class CommentController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "수정권한이 없습니다.");
         }
         this.commentService.modify(comment, commentForm.getContent());
-        return String.format("redirect:/question/detail/%s?answerPage=%s&answerSort=%s#comment_%s",
-                getQuestionId(comment), answerPage, answerSort, comment.getId());
+        return String.format("redirect:%s?answerPage=%s&answerSort=%s#comment_%s",
+                getQuestionDetailUrl(comment), answerPage, answerSort, comment.getId());
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -133,16 +135,24 @@ public class CommentController {
         if (!comment.getAuthor().getUsername().equals(principal.getName())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "삭제권한이 없습니다.");
         }
-        Integer questionId = getQuestionId(comment);
+        String questionDetailUrl = getQuestionDetailUrl(comment);
         this.commentService.delete(comment);
-        return String.format("redirect:/question/detail/%s?answerPage=%s&answerSort=%s",
-                questionId, answerPage, answerSort);
+        return String.format("redirect:%s?answerPage=%s&answerSort=%s",
+                questionDetailUrl, answerPage, answerSort);
     }
 
-    private Integer getQuestionId(Comment comment) {
+    private String getQuestionDetailUrl(Comment comment) {
         if (comment.getQuestion() != null) {
-            return comment.getQuestion().getId();
+            return getQuestionDetailUrl(comment.getQuestion());
         }
-        return comment.getAnswer().getQuestion().getId();
+        return getQuestionDetailUrl(comment.getAnswer().getQuestion());
+    }
+
+    private String getQuestionDetailUrl(Question question) {
+        String categoryCode = question.getCategory() != null
+                ? question.getCategory().getCode()
+                : CategoryService.DEFAULT_CATEGORY_CODE;
+        long questionNumber = this.questionService.getCategoryQuestionNumber(question);
+        return String.format("/question/%s/detail/%s", categoryCode, questionNumber);
     }
 }

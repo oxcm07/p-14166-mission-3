@@ -1,6 +1,7 @@
 package com.mysite.sbb.answer;
 
 import com.mysite.sbb.CommonUtil;
+import com.mysite.sbb.category.CategoryService;
 import com.mysite.sbb.comment.CommentForm;
 import com.mysite.sbb.question.Question;
 import com.mysite.sbb.question.QuestionService;
@@ -48,8 +49,8 @@ public class AnswerController {
         }
         Answer answer = this.answerService.create(question, answerForm.getContent(), siteUser);
         // 답변 등록 후 앵커로 스크롤을 이동시키기 위해 #answer_%s 추가
-        return String.format("redirect:/question/detail/%s#answer_%s",
-                answer.getQuestion().getId(), answer.getId());
+        return String.format("redirect:%s?answerPage=%s&answerSort=%s#answer_%s",
+                getQuestionDetailUrl(answer.getQuestion()), answerPage, answerSort, answer.getId());
     }
     // 컨트롤러에서 마크다운을 HTML로 변환해서 모델에 담아 넘기는 방식
     private void addQuestionDetailAttributes(Model model, Question question, int answerPage, String answerSort) {
@@ -62,6 +63,7 @@ public class AnswerController {
         model.addAttribute("answerPaging", answerPaging);
         model.addAttribute("answerContentMap", answerContentMap);
         model.addAttribute("answerSort", answerSort);
+        model.addAttribute("questionNumber", this.questionService.getCategoryQuestionNumber(question));
         if (!model.containsAttribute("commentForm")) {
             model.addAttribute("commentForm", new CommentForm());
         }
@@ -99,8 +101,8 @@ public class AnswerController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "수정권한이 없습니다.");
         }
         this.answerService.modify(answer, answerForm.getContent());
-        return String.format("redirect:/question/detail/%s?answerPage=%s&answerSort=%s#answer_%s",
-                answer.getQuestion().getId(), answerPage, answerSort, answer.getId());
+        return String.format("redirect:%s?answerPage=%s&answerSort=%s#answer_%s",
+                getQuestionDetailUrl(answer.getQuestion()), answerPage, answerSort, answer.getId());
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -113,8 +115,8 @@ public class AnswerController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "삭제권한이 없습니다.");
         }
         this.answerService.delete(answer);
-        return String.format("redirect:/question/detail/%s?answerPage=%s&answerSort=%s",
-                answer.getQuestion().getId(), answerPage, answerSort);
+        return String.format("redirect:%s?answerPage=%s&answerSort=%s",
+                getQuestionDetailUrl(answer.getQuestion()), answerPage, answerSort);
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -125,7 +127,15 @@ public class AnswerController {
         Answer answer = this.answerService.getAnswer(id);
         SiteUser siteUser = this.userService.getUser(principal.getName());
         this.answerService.vote(answer, siteUser);
-        return String.format("redirect:/question/detail/%s?answerPage=%s&answerSort=%s#answer_%s",
-                answer.getQuestion().getId(), answerPage, answerSort, answer.getId());
+        return String.format("redirect:%s?answerPage=%s&answerSort=%s#answer_%s",
+                getQuestionDetailUrl(answer.getQuestion()), answerPage, answerSort, answer.getId());
+    }
+
+    private String getQuestionDetailUrl(Question question) {
+        String categoryCode = question.getCategory() != null
+                ? question.getCategory().getCode()
+                : CategoryService.DEFAULT_CATEGORY_CODE;
+        long questionNumber = this.questionService.getCategoryQuestionNumber(question);
+        return String.format("/question/%s/detail/%s", categoryCode, questionNumber);
     }
 }

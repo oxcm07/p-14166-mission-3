@@ -2,7 +2,7 @@
 <div layout:fragment="content" class="container my-3">
     <div class="row my-3">
         <div class="col-6">
-            <a th:href="@{/question/create}" class="btn btn-primary">질문 등록하기</a>
+            <a th:href="@{/question/create(categoryCode=${category.code})}" class="btn btn-primary">질문 등록하기</a>
         </div>
         <div class="col-6">
             <div class="input-group">
@@ -11,6 +11,14 @@
             </div>
         </div>
     </div>
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item" th:each="cate : ${categoryList}">
+            <a class="nav-link"
+               th:classappend="${cate.code == category.code} ? 'active'"
+               th:href="@{/question/{code}/list(code=${cate.code})}"
+               th:text="${cate.name}"></a>
+        </li>
+    </ul>
     <table class="table">
         <thead class="table-dark">
         <tr class="text-center">
@@ -22,9 +30,10 @@
         </thead>
         <tbody>
         <tr class="text-center" th:each="question, loop : ${paging}">
-            <td th:text="${paging.getTotalElements - (paging.number * paging.size) - loop.index}"></td>
+            <td th:text="${questionNumberMap[question.id]}"></td>
             <td class="text-start">
-                <a th:href="@{|/question/detail/${question.id}|}" th:text="${question.subject}"></a>
+                <a th:href="@{/question/{code}/detail/{number}(code=${category.code}, number=${questionNumberMap[question.id]})}"
+                   th:text="${question.subject}"></a>
                 <span class="text-danger small ms-2"
                       th:if="${#lists.size(question.answerList) > 0}"
                       th:text="${#lists.size(question.answerList)}">
@@ -57,7 +66,7 @@
     </div>
     <!-- 페이징처리 끝 -->
     <!--게시물 목록을 조회할 때는 GET 방식을 사용-->
-    <form th:action="@{/question/list}" method="get" id="searchForm">
+    <form th:action="@{/question/{code}/list(code=${category.code})}" method="get" id="searchForm">
         <input type="hidden" id="kw" name="kw" th:value="${kw}">
         <input type="hidden" id="page" name="page" th:value="${paging.number}">
     </form>

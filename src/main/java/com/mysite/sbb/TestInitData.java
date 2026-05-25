@@ -1,24 +1,40 @@
 package com.mysite.sbb;
 
+import com.mysite.sbb.category.Category;
+import com.mysite.sbb.category.CategoryService;
+import com.mysite.sbb.answer.AnswerRepository;
 import com.mysite.sbb.question.Question;
 import com.mysite.sbb.question.QuestionRepository;
+import com.mysite.sbb.user.SiteUser;
+import com.mysite.sbb.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.context.annotation.Profile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
 @Configuration
+@Profile("!test")
 @RequiredArgsConstructor
 public class TestInitData {
+    private static final String INIT_USERNAME = "testuser";
+    private static final String INIT_EMAIL = "testuser@sbb.local";
+    private static final String INIT_PASSWORD = "1234";
+
     @Autowired
     @Lazy
     private TestInitData self;
     private final QuestionRepository questionRepository;
+    private final AnswerRepository answerRepository;
+    private final CategoryService categoryService;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Bean
     public ApplicationRunner testInitDataApplicationRunner() {
@@ -29,22 +45,72 @@ public class TestInitData {
 
     @Transactional
     void work1() {
+        this.categoryService.initializeDefaultCategories();
+        Category questionAnswer = this.categoryService.getDefaultCategory();
+        this.questionRepository.updateNullCategory(questionAnswer);
+        SiteUser initUser = this.getInitUser();
+        this.assignAuthorToExistingData(initUser);
+
         if (questionRepository.count() > 0) return;
+
+        LocalDateTime baseDateTime = LocalDateTime.now();
+
+        for (int i = 0; i <= 150; i++) {
+            Question q = new Question();
+            q.setSubject("테스트 제목입니다: " + i);
+            q.setContent("테스트 데이터 내용입니다: " + i);
+            q.setCreateDate(baseDateTime.plusSeconds(i - 1));
+            q.setCategory(questionAnswer);
+            q.setAuthor(initUser);
+            questionRepository.save(q);
+        }
 
         Question q1 = new Question();
         q1.setSubject("sbb가 무엇인가요?");
         q1.setContent("sbb에 대해서 알고 싶습니다.");
-        q1.setCreateDate(LocalDateTime.now());
+        q1.setCreateDate(baseDateTime.plusSeconds(150));
+        q1.setCategory(questionAnswer);
+        q1.setAuthor(initUser);
         questionRepository.save(q1); // 첫번째 질문 저장
 
         Question q2 = new Question();
         q2.setSubject("스프링부트 모델 질문입니다.");
         q2.setContent("id는 자동으로 생성되나요?");
-        q2.setCreateDate(LocalDateTime.now());
+        q2.setCreateDate(baseDateTime.plusSeconds(151));
+        q2.setCategory(questionAnswer);
+        q2.setAuthor(initUser);
 
         q2.addAnswer("네 자동으로 생성됩니다.");
         q2.addAnswer("따로 생성할 필요가 없습니다.");
+        q2.getAnswerList().forEach(answer -> answer.setAuthor(initUser));
 
         questionRepository.save(q2); // 두번째 질문 저장
+    }
+
+    private SiteUser getInitUser() {
+        return this.userRepository.findByUsername(INIT_USERNAME)
+                .orElseGet(() -> {
+                    SiteUser user = new SiteUser();
+                    user.setUsername(INIT_USERNAME);
+                    user.setEmail(INIT_EMAIL);
+                    user.setPassword(this.passwordEncoder.encode(INIT_PASSWORD));
+                    return this.userRepository.save(user);
+                });
+    }
+
+    private void assignAuthorToExistingData(SiteUser initUser) {
+        this.questionRepository.findAll().stream()
+                .filter(question -> question.getAuthor() == null)
+                .forEach(question -> {
+                    question.setAuthor(initUser);
+                    this.questionRepository.save(question);
+                });
+
+        this.answerRepository.findAll().stream()
+                .filter(answer -> answer.getAuthor() == null)
+                .forEach(answer -> {
+                    answer.setAuthor(initUser);
+                    this.answerRepository.save(answer);
+                });
     }
 }

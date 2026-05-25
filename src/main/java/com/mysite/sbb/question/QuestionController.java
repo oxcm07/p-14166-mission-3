@@ -4,6 +4,8 @@ import com.mysite.sbb.CommonUtil;
 import com.mysite.sbb.answer.Answer;
 import com.mysite.sbb.answer.AnswerService;
 import com.mysite.sbb.answer.AnswerForm;
+import com.mysite.sbb.category.Category;
+import com.mysite.sbb.category.CategoryService;
 import com.mysite.sbb.comment.CommentForm;
 import com.mysite.sbb.user.SiteUser;
 import com.mysite.sbb.user.UserService;
@@ -28,23 +30,34 @@ import java.util.stream.Collectors;
 public class QuestionController {
     private final QuestionService questionService;
     private final AnswerService answerService;
+    private final CategoryService categoryService;
     private final UserService userService;
     private final CommonUtil commonUtil;
 
-    @GetMapping("/list")
+    @GetMapping("/{categoryCode}/list")
     public String list(Model model, @RequestParam(value = "page", defaultValue = "0") int page,
-                       @RequestParam(value = "kw", defaultValue = "") String kw) {
-        Page<Question> paging = this.questionService.getList(page, kw);
+                       @RequestParam(value = "kw", defaultValue = "") String kw,
+                       @PathVariable("categoryCode") String categoryCode) {
+        Category category = this.categoryService.getCategory(categoryCode);
+        Page<Question> paging = this.questionService.getList(page, kw, category);
+        Map<Integer, Long> questionNumberMap = paging.getContent().stream()
+                .collect(Collectors.toMap(Question::getId, this.questionService::getCategoryQuestionNumber));
         model.addAttribute("paging", paging);
         model.addAttribute("kw", kw);
+        model.addAttribute("categoryList", this.categoryService.getList());
+        model.addAttribute("category", category);
+        model.addAttribute("questionNumberMap", questionNumberMap);
         return "question_list";
     }
 
-    @GetMapping(value = "/detail/{id}")
-    public String detail(Model model, @PathVariable("id") Integer id, AnswerForm answerForm, CommentForm commentForm,
+    @GetMapping(value = "/{categoryCode}/detail/{questionNumber}")
+    public String detail(Model model, @PathVariable("categoryCode") String categoryCode,
+                         @PathVariable("questionNumber") int questionNumber,
+                         AnswerForm answerForm, CommentForm commentForm,
                          @RequestParam(value = "answerPage", defaultValue = "0") int answerPage,
                          @RequestParam(value = "answerSort", defaultValue = "latest") String answerSort) {
-        Question question = this.questionService.getQuestion(id);
+        Category category = this.categoryService.getCategory(categoryCode);
+        Question question = this.questionService.getQuestion(category, questionNumber);
         addQuestionDetailAttributes(model, question, answerPage, answerSort);
         return "question_detail";
     }
@@ -59,51 +72,78 @@ public class QuestionController {
         model.addAttribute("answerPaging", answerPaging);
         model.addAttribute("answerContentMap", answerContentMap);
         model.addAttribute("answerSort", answerSort);
+        model.addAttribute("questionNumber", this.questionService.getCategoryQuestionNumber(question));
+    }
+
+    private String getDetailUrl(Question question) {
+        String categoryCode = question.getCategory() != null
+                ? question.getCategory().getCode()
+                : CategoryService.DEFAULT_CATEGORY_CODE;
+        long questionNumber = this.questionService.getCategoryQuestionNumber(question);
+        return String.format("/question/%s/detail/%s", categoryCode, questionNumber);
     }
 
     @PreAuthorize("isAuthenticated()") //로그인 필요
     @GetMapping("/create")
-    public String questionCreate(QuestionForm questionForm) {
+    public String questionCreate(QuestionForm questionForm,
+                                 @RequestParam(value = "categoryCode", defaultValue = CategoryService.DEFAULT_CATEGORY_CODE)
+                                 String categoryCode, Model model) {
+        Category category = this.categoryService.getCategoryOrDefault(categoryCode);
+        questionForm.setCategoryCode(category.getCode());
+        model.addAttribute("categoryList", this.categoryService.getList());
+        model.addAttribute("formAction", "/question/create");
         return "question_form";
     }
 
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/create")
     public String questionCreate(@Valid QuestionForm questionForm,
-                                 BindingResult bindingResult, Principal principal) {
+                                 BindingResult bindingResult, Principal principal, Model model) {
         if (bindingResult.hasErrors()) {
+            model.addAttribute("categoryList", this.categoryService.getList());
+            model.addAttribute("formAction", "/question/create");
             return "question_form";
         }
         SiteUser siteUser = this.userService.getUser(principal.getName());
-        this.questionService.create(questionForm.getSubject(), questionForm.getContent(), siteUser);
-        return "redirect:/question/list"; // 질문 저장 후 질문목록으로 리다이렉트
+        Category category = this.categoryService.getCategoryOrDefault(questionForm.getCategoryCode());
+        this.questionService.create(questionForm.getSubject(), questionForm.getContent(), siteUser, category);
+        return String.format("redirect:/question/%s/list", category.getCode()); // 질문 저장 후 질문목록으로 리다이렉트
     }
 
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/modify/{id}")
-    public String questionModify(QuestionForm questionForm, @PathVariable("id") Integer id, Principal principal) {
+    public String questionModify(QuestionForm questionForm, @PathVariable("id") Integer id,
+                                 Principal principal, Model model) {
         Question question = this.questionService.getQuestion(id);
         if (!question.getAuthor().getUsername().equals(principal.getName())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "수정권한이 없습니다.");
         }
         questionForm.setSubject(question.getSubject());
         questionForm.setContent(question.getContent());
+        if (question.getCategory() != null) {
+            questionForm.setCategoryCode(question.getCategory().getCode());
+        }
+        model.addAttribute("categoryList", this.categoryService.getList());
+        model.addAttribute("formAction", String.format("/question/modify/%s", id));
         return "question_form";
     }
 
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/modify/{id}")
     public String questionModify(@Valid QuestionForm questionForm, BindingResult bindingResult,
-                                 Principal principal, @PathVariable("id") Integer id) {
+                                 Principal principal, @PathVariable("id") Integer id, Model model) {
         if (bindingResult.hasErrors()) {
+            model.addAttribute("categoryList", this.categoryService.getList());
+            model.addAttribute("formAction", String.format("/question/modify/%s", id));
             return "question_form";
         }
         Question question = this.questionService.getQuestion(id);
         if (!question.getAuthor().getUsername().equals(principal.getName())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "수정권한이 없습니다.");
         }
-        this.questionService.modify(question, questionForm.getSubject(), questionForm.getContent());
-        return String.format("redirect:/question/detail/%s", id);
+        Category category = this.categoryService.getCategoryOrDefault(questionForm.getCategoryCode());
+        this.questionService.modify(question, questionForm.getSubject(), questionForm.getContent(), category);
+        return String.format("redirect:%s", getDetailUrl(question));
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -113,8 +153,11 @@ public class QuestionController {
         if (!question.getAuthor().getUsername().equals(principal.getName())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "삭제권한이 없습니다.");
         }
+        String categoryCode = question.getCategory() != null
+                ? question.getCategory().getCode()
+                : CategoryService.DEFAULT_CATEGORY_CODE;
         this.questionService.delete(question);
-        return "redirect:/";
+        return String.format("redirect:/question/%s/list", categoryCode);
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -123,6 +166,6 @@ public class QuestionController {
         Question question = this.questionService.getQuestion(id);
         SiteUser siteUser = this.userService.getUser(principal.getName()); //로그인 ID를 DB와 매핑 가능한 SiteUser로 승격
         this.questionService.vote(question, siteUser);
-        return String.format("redirect:/question/detail/%s", id);
+        return String.format("redirect:%s", getDetailUrl(question));
     }
 }

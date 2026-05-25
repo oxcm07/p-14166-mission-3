@@ -2,6 +2,7 @@ package com.mysite.sbb.question;
 
 import com.mysite.sbb.DataNotFoundException;
 import com.mysite.sbb.answer.Answer;
+import com.mysite.sbb.category.Category;
 import com.mysite.sbb.user.SiteUser;
 import jakarta.persistence.criteria.*;
 import lombok.RequiredArgsConstructor;
@@ -41,10 +42,18 @@ public class QuestionService {
     }
 
     public Page<Question> getList(int page, String kw) {
+        return getList(page, kw, null);
+    }
+
+    public Page<Question> getList(int page, String kw, Category category) {
         List<Sort.Order> sorts = new ArrayList<>();
         sorts.add(Sort.Order.desc("createDate"));
+        sorts.add(Sort.Order.desc("id"));
         Pageable pageable = PageRequest.of(page, 10, Sort.by(sorts));
         Specification<Question> spec = search(kw);
+        if (category != null) {
+            spec = spec.and((q, query, cb) -> cb.equal(q.get("category"), category));
+        }
         return this.questionRepository.findAll(spec, pageable);
     }
 
@@ -57,18 +66,45 @@ public class QuestionService {
         }
     }
 
-    public void create(String subject, String content, SiteUser user) {
+    public Question getQuestion(Category category, int questionNumber) {
+        if (questionNumber < 1) {
+            throw new DataNotFoundException("question not found");
+        }
+        long totalCount = this.questionRepository.countByCategory(category);
+        if (questionNumber > totalCount) {
+            throw new DataNotFoundException("question not found");
+        }
+        Pageable pageable = PageRequest.of(questionNumber - 1, 1,
+                Sort.by(Sort.Order.asc("createDate"), Sort.Order.asc("id")));
+        Page<Question> paging = this.questionRepository.findAllByCategory(category, pageable);
+        if (paging.hasContent()) {
+            return paging.getContent().get(0);
+        }
+        throw new DataNotFoundException("question not found");
+    }
+
+    public long getCategoryQuestionNumber(Question question) {
+        Category category = question.getCategory();
+        if (category == null) {
+            return question.getId();
+        }
+        return this.questionRepository.countCategoryQuestionNumber(category, question.getCreateDate(), question.getId());
+    }
+
+    public void create(String subject, String content, SiteUser user, Category category) {
         Question q = new Question();
         q.setSubject(subject);
         q.setContent(content);
         q.setCreateDate(LocalDateTime.now());
         q.setAuthor(user);
+        q.setCategory(category);
         this.questionRepository.save(q);
     }
 
-    public void modify(Question question, String subject, String content) {
+    public void modify(Question question, String subject, String content, Category category) {
         question.setSubject(subject);
         question.setContent(content);
+        question.setCategory(category);
         question.setModifyDate(LocalDateTime.now());
         this.questionRepository.save(question);
     }

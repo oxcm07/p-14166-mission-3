@@ -1,7 +1,12 @@
 <html layout:decorate="~{layout}">
 <div layout:fragment="content" class="container my-3">
     <!-- 질문 -->
-    <h2 class="border-bottom py-2" th:text="${question.subject}"></h2>
+    <h2 class="border-bottom py-2">
+        <span class="badge bg-secondary align-middle"
+              th:if="${question.category != null}"
+              th:text="${question.category.name}"></span>
+        <span th:text="${question.subject}"></span>
+    </h2>
     <div class="card my-3">
         <div class="card-body">
             <!--최신 타임리프는 HTML 템플릿 안에서 @beanName 형태로 스프링 빈을 직접 호출하는 기능을 기본적으로 차단-->
@@ -154,7 +159,7 @@
         </ul>
     </div>
     <!-- 답변 페이징처리 끝 -->
-    <form th:action="@{|/question/detail/${question.id}|}" method="get" id="answerSearchForm">
+    <form th:action="@{/question/{code}/detail/{number}(code=${question.category.code}, number=${questionNumber})}" method="get" id="answerSearchForm">
         <input type="hidden" id="answerPage" name="answerPage" th:value="${answerPaging.number}">
         <input type="hidden" id="answerSort" name="answerSort" th:value="${answerSort}">
     </form>
