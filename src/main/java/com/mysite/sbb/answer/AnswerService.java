@@ -41,6 +41,14 @@ public class AnswerService {
         return this.answerRepository.findAllByAuthorOrderByCreateDateDesc(author, pageable);
     }
 
+    public Page<Answer> getRecentList(int page) {
+        List<Sort.Order> sorts = new ArrayList<>();
+        sorts.add(Sort.Order.desc("createDate"));
+        sorts.add(Sort.Order.desc("id"));
+        Pageable pageable = PageRequest.of(page, 10, Sort.by(sorts));
+        return this.answerRepository.findAll(pageable);
+    }
+
     public Answer create(Question question, String content, SiteUser author) {
         Answer answer = new Answer();
         answer.setContent(content);

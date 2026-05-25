@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.security.Principal;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -37,6 +38,27 @@ public class CommentController {
     private final CommentService commentService;
     private final UserService userService;
     private final CommonUtil commonUtil;
+
+    @GetMapping("/list")
+    public String list(Model model, @RequestParam(value = "page", defaultValue = "1") int page) {
+        Page<Comment> paging = this.commentService.getRecentList(toZeroBasedPage(page));
+        Map<Integer, Long> questionNumberMap = new HashMap<>();
+        Map<Integer, String> questionCategoryCodeMap = new HashMap<>();
+        Map<Integer, Question> commentTargetQuestionMap = new HashMap<>();
+        paging.getContent().forEach(comment -> {
+            Question targetQuestion = getCommentTargetQuestion(comment);
+            if (targetQuestion != null) {
+                commentTargetQuestionMap.put(comment.getId(), targetQuestion);
+                addQuestionMeta(targetQuestion, questionNumberMap, questionCategoryCodeMap);
+            }
+        });
+
+        model.addAttribute("paging", paging);
+        model.addAttribute("questionNumberMap", questionNumberMap);
+        model.addAttribute("questionCategoryCodeMap", questionCategoryCodeMap);
+        model.addAttribute("commentTargetQuestionMap", commentTargetQuestionMap);
+        return "comment/list";
+    }
 
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/create/question/{id}")
@@ -154,6 +176,32 @@ public class CommentController {
                 : CategoryService.DEFAULT_CATEGORY_CODE;
         long questionNumber = this.questionService.getCategoryQuestionNumber(question);
         return String.format("/question/%s/detail/%s", categoryCode, questionNumber);
+    }
+
+    private void addQuestionMeta(Question question, Map<Integer, Long> questionNumberMap,
+                                 Map<Integer, String> questionCategoryCodeMap) {
+        if (question == null) {
+            return;
+        }
+        questionNumberMap.putIfAbsent(question.getId(), this.questionService.getCategoryQuestionNumber(question));
+        questionCategoryCodeMap.putIfAbsent(question.getId(), getCategoryCode(question));
+    }
+
+    private String getCategoryCode(Question question) {
+        if (question.getCategory() == null) {
+            return CategoryService.DEFAULT_CATEGORY_CODE;
+        }
+        return question.getCategory().getCode();
+    }
+
+    private Question getCommentTargetQuestion(Comment comment) {
+        if (comment.getQuestion() != null) {
+            return comment.getQuestion();
+        }
+        if (comment.getAnswer() != null) {
+            return comment.getAnswer().getQuestion();
+        }
+        return null;
     }
 
     private int toZeroBasedPage(int page) {

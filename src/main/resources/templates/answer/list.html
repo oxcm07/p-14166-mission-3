@@ -1,0 +1,44 @@
+<html layout:decorate="~{layout/base}">
+<div layout:fragment="content" class="container my-3">
+    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+        <h2 class="mb-0">최근 답변</h2>
+        <span class="text-muted small" th:text="|${paging.totalElements}개|"></span>
+    </div>
+
+    <div class="list-group" th:if="${!paging.isEmpty()}">
+        <a class="list-group-item list-group-item-action"
+           th:each="answer : ${paging}"
+           th:href="@{/question/{code}/detail/{number}(code=${questionCategoryCodeMap[answer.question.id]}, number=${questionNumberMap[answer.question.id]})} + '#answer_' + ${answer.id}">
+            <div class="d-flex w-100 justify-content-between gap-3">
+                <h6 class="mb-1 text-truncate" th:text="${answer.question.subject}"></h6>
+                <small class="text-muted text-nowrap"
+                       th:text="${#temporals.format(answer.createDate, 'yyyy-MM-dd HH:mm')}"></small>
+            </div>
+            <p class="mb-1 text-truncate" th:text="${answer.content}"></p>
+            <div class="d-flex gap-2 small text-muted">
+                <span th:if="${answer.author != null}" th:text="${answer.author.username}"></span>
+                <span th:if="${answer.question.category != null}" th:text="${answer.question.category.name}"></span>
+                <span th:text="|추천 ${#lists.size(answer.voter)}개|"></span>
+            </div>
+        </a>
+    </div>
+    <div class="text-muted py-3" th:if="${paging.isEmpty()}">작성된 답변이 없습니다.</div>
+
+    <div th:if="${!paging.isEmpty()}">
+        <ul class="pagination justify-content-center mt-3">
+            <li class="page-item" th:classappend="${!paging.hasPrevious} ? 'disabled'">
+                <a class="page-link" th:href="@{/answer/list(page=${paging.hasPrevious ? paging.number : 1})}">이전</a>
+            </li>
+            <li th:each="page : ${#numbers.sequence(0, paging.totalPages - 1)}"
+                th:if="${page >= paging.number - 5 and page <= paging.number + 5}"
+                th:classappend="${page == paging.number} ? 'active'"
+                class="page-item">
+                <a class="page-link" th:text="${page + 1}" th:href="@{/answer/list(page=${page + 1})}"></a>
+            </li>
+            <li class="page-item" th:classappend="${!paging.hasNext} ? 'disabled'">
+                <a class="page-link" th:href="@{/answer/list(page=${paging.number + 2})}">다음</a>
+            </li>
+        </ul>
+    </div>
+</div>
+</html>

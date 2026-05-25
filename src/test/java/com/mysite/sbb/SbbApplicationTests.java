@@ -343,6 +343,51 @@ class SbbApplicationTests {
 	}
 
 	@Test
+	void recentAnswerListShowsNewestAnswersFirst() throws Exception {
+		SiteUser author = createUser();
+		Question question = createQuestion("최근 답변 대상 질문", "질문 내용", category("qna"), author, 0);
+		createAnswer(question, "오래된 답변", author, 1);
+		Answer recentAnswer = createAnswer(question, "최신 답변", author, 2);
+
+		var result = mockMvc.perform(get("/answer/list"))
+				.andExpect(status().isOk())
+				.andExpect(view().name("answer/list"))
+				.andExpect(model().attributeExists("paging", "questionNumberMap", "questionCategoryCodeMap"))
+				.andExpect(content().string(containsString("최근 답변")))
+				.andExpect(content().string(containsString("최근 답변 대상 질문")))
+				.andExpect(content().string(containsString("최신 답변")))
+				.andExpect(content().string(containsString("/question/qna/detail/1#answer_" + recentAnswer.getId())))
+				.andReturn();
+
+		String html = result.getResponse().getContentAsString();
+		assertThat(html.indexOf("최신 답변")).isLessThan(html.indexOf("오래된 답변"));
+	}
+
+	@Test
+	void recentCommentListShowsNewestCommentsFirst() throws Exception {
+		SiteUser author = createUser();
+		Question question = createQuestion("최근 댓글 대상 질문", "질문 내용", category("qna"), author, 0);
+		Answer answer = createAnswer(question, "댓글 대상 답변", author, 1);
+		createComment(question, "오래된 댓글", author, 2);
+		Comment recentComment = createComment(answer, "최신 댓글", author, 3);
+
+		var result = mockMvc.perform(get("/comment/list"))
+				.andExpect(status().isOk())
+				.andExpect(view().name("comment/list"))
+				.andExpect(model().attributeExists("paging", "questionNumberMap", "questionCategoryCodeMap",
+						"commentTargetQuestionMap"))
+				.andExpect(content().string(containsString("최근 댓글")))
+				.andExpect(content().string(containsString("최근 댓글 대상 질문")))
+				.andExpect(content().string(containsString("최신 댓글")))
+				.andExpect(content().string(containsString("답변 댓글")))
+				.andExpect(content().string(containsString("/question/qna/detail/1#comment_" + recentComment.getId())))
+				.andReturn();
+
+		String html = result.getResponse().getContentAsString();
+		assertThat(html.indexOf("최신 댓글")).isLessThan(html.indexOf("오래된 댓글"));
+	}
+
+	@Test
 	void passwordResetSendsTemporaryPasswordAndUpdatesStoredPassword() throws Exception {
 		createUser();
 
@@ -548,6 +593,33 @@ class SbbApplicationTests {
 		question.setAuthor(author);
 		question.setCreateDate(LocalDateTime.of(2026, 1, 1, 0, 0).plusSeconds(seconds));
 		return questionRepository.save(question);
+	}
+
+	private Answer createAnswer(Question question, String content, SiteUser author, int seconds) {
+		Answer answer = new Answer();
+		answer.setQuestion(question);
+		answer.setContent(content);
+		answer.setAuthor(author);
+		answer.setCreateDate(LocalDateTime.of(2026, 1, 1, 0, 0).plusSeconds(seconds));
+		return answerRepository.save(answer);
+	}
+
+	private Comment createComment(Question question, String content, SiteUser author, int seconds) {
+		Comment comment = new Comment();
+		comment.setQuestion(question);
+		comment.setContent(content);
+		comment.setAuthor(author);
+		comment.setCreateDate(LocalDateTime.of(2026, 1, 1, 0, 0).plusSeconds(seconds));
+		return commentRepository.save(comment);
+	}
+
+	private Comment createComment(Answer answer, String content, SiteUser author, int seconds) {
+		Comment comment = new Comment();
+		comment.setAnswer(answer);
+		comment.setContent(content);
+		comment.setAuthor(author);
+		comment.setCreateDate(LocalDateTime.of(2026, 1, 1, 0, 0).plusSeconds(seconds));
+		return commentRepository.save(comment);
 	}
 
 	@TestConfiguration

@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.security.Principal;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -34,6 +35,20 @@ public class AnswerController {
     private final AnswerService answerService;
     private final UserService userService;
     private final CommonUtil commonUtil;
+
+    @GetMapping("/list")
+    public String list(Model model, @RequestParam(value = "page", defaultValue = "1") int page) {
+        Page<Answer> paging = this.answerService.getRecentList(toZeroBasedPage(page));
+        Map<Integer, Long> questionNumberMap = new HashMap<>();
+        Map<Integer, String> questionCategoryCodeMap = new HashMap<>();
+        paging.getContent().forEach(answer -> addQuestionMeta(
+                answer.getQuestion(), questionNumberMap, questionCategoryCodeMap));
+
+        model.addAttribute("paging", paging);
+        model.addAttribute("questionNumberMap", questionNumberMap);
+        model.addAttribute("questionCategoryCodeMap", questionCategoryCodeMap);
+        return "answer/list";
+    }
 
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/create/{id}")
@@ -137,6 +152,22 @@ public class AnswerController {
                 : CategoryService.DEFAULT_CATEGORY_CODE;
         long questionNumber = this.questionService.getCategoryQuestionNumber(question);
         return String.format("/question/%s/detail/%s", categoryCode, questionNumber);
+    }
+
+    private void addQuestionMeta(Question question, Map<Integer, Long> questionNumberMap,
+                                 Map<Integer, String> questionCategoryCodeMap) {
+        if (question == null) {
+            return;
+        }
+        questionNumberMap.putIfAbsent(question.getId(), this.questionService.getCategoryQuestionNumber(question));
+        questionCategoryCodeMap.putIfAbsent(question.getId(), getCategoryCode(question));
+    }
+
+    private String getCategoryCode(Question question) {
+        if (question.getCategory() == null) {
+            return CategoryService.DEFAULT_CATEGORY_CODE;
+        }
+        return question.getCategory().getCode();
     }
 
     private int toZeroBasedPage(int page) {
