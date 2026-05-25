@@ -1,23 +1,37 @@
 package com.mysite.sbb.user;
 
 import com.mysite.sbb.DataNotFoundException;
+import com.mysite.sbb.answer.Answer;
+import com.mysite.sbb.answer.AnswerService;
+import com.mysite.sbb.category.CategoryService;
+import com.mysite.sbb.comment.Comment;
+import com.mysite.sbb.comment.CommentService;
+import com.mysite.sbb.question.Question;
+import com.mysite.sbb.question.QuestionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.security.Principal;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @RequiredArgsConstructor
 @Controller
 @RequestMapping("/user")
 public class UserController {
     private final UserService userService;
+    private final QuestionService questionService;
+    private final AnswerService answerService;
+    private final CommentService commentService;
 
     @GetMapping("/signup")
     public String signup(UserCreateForm userCreateForm) {
@@ -53,6 +67,64 @@ public class UserController {
     @GetMapping("/login")
     public String login() {
         return "login_form";
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/profile")
+    public String profile(Model model, Principal principal) {
+        SiteUser siteUser = this.userService.getUser(principal.getName());
+        List<Question> questionList = this.questionService.getListByAuthor(siteUser);
+        List<Answer> answerList = this.answerService.getListByAuthor(siteUser);
+        List<Comment> commentList = this.commentService.getListByAuthor(siteUser);
+
+        Map<Integer, Long> questionNumberMap = new HashMap<>();
+        Map<Integer, String> questionCategoryCodeMap = new HashMap<>();
+        Map<Integer, Question> commentTargetQuestionMap = new HashMap<>();
+
+        questionList.forEach(question -> addQuestionMeta(question, questionNumberMap, questionCategoryCodeMap));
+        answerList.forEach(answer -> addQuestionMeta(answer.getQuestion(), questionNumberMap, questionCategoryCodeMap));
+        commentList.forEach(comment -> {
+            Question targetQuestion = getCommentTargetQuestion(comment);
+            if (targetQuestion != null) {
+                commentTargetQuestionMap.put(comment.getId(), targetQuestion);
+                addQuestionMeta(targetQuestion, questionNumberMap, questionCategoryCodeMap);
+            }
+        });
+
+        model.addAttribute("siteUser", siteUser);
+        model.addAttribute("questionList", questionList);
+        model.addAttribute("answerList", answerList);
+        model.addAttribute("commentList", commentList);
+        model.addAttribute("questionNumberMap", questionNumberMap);
+        model.addAttribute("questionCategoryCodeMap", questionCategoryCodeMap);
+        model.addAttribute("commentTargetQuestionMap", commentTargetQuestionMap);
+        return "profile";
+    }
+
+    private void addQuestionMeta(Question question, Map<Integer, Long> questionNumberMap,
+                                 Map<Integer, String> questionCategoryCodeMap) {
+        if (question == null) {
+            return;
+        }
+        questionNumberMap.putIfAbsent(question.getId(), this.questionService.getCategoryQuestionNumber(question));
+        questionCategoryCodeMap.putIfAbsent(question.getId(), getCategoryCode(question));
+    }
+
+    private String getCategoryCode(Question question) {
+        if (question.getCategory() == null) {
+            return CategoryService.DEFAULT_CATEGORY_CODE;
+        }
+        return question.getCategory().getCode();
+    }
+
+    private Question getCommentTargetQuestion(Comment comment) {
+        if (comment.getQuestion() != null) {
+            return comment.getQuestion();
+        }
+        if (comment.getAnswer() != null) {
+            return comment.getAnswer().getQuestion();
+        }
+        return null;
     }
 
     @GetMapping("/password/reset")

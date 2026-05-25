@@ -53,6 +53,10 @@ public class QuestionService {
         return this.questionRepository.findAll(spec, pageable);
     }
 
+    public List<Question> getListByAuthor(SiteUser author) {
+        return this.questionRepository.findAllByAuthorOrderByCreateDateDesc(author);
+    }
+
     public Question getQuestion(Integer id) {
         Optional<Question> question = this.questionRepository.findById(id);
         if (question.isPresent()) {

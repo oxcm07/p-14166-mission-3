@@ -8,12 +8,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @RequiredArgsConstructor
 @Service
 public class CommentService {
     private final CommentRepository commentRepository;
+
+    public List<Comment> getListByAuthor(SiteUser author) {
+        return this.commentRepository.findAllByAuthorOrderByCreateDateDesc(author);
+    }
 
     public Comment create(Question question, String content, SiteUser author) {
         Comment comment = new Comment();

@@ -1,0 +1,112 @@
+<html layout:decorate="~{layout}">
+<div layout:fragment="content" class="container my-3">
+    <div class="border-bottom pb-3 mb-4">
+        <h2 class="mb-3">내 프로필</h2>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                                 style="width: 56px; height: 56px; font-size: 1.5rem;"
+                                 th:text="${#strings.substring(siteUser.username, 0, 1)}"></div>
+                            <div>
+                                <h5 class="card-title mb-1" th:text="${siteUser.username}"></h5>
+                                <div class="text-muted" th:text="${siteUser.email}"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col">
+                                <div class="fs-4 fw-bold" th:text="${#lists.size(questionList)}"></div>
+                                <div class="text-muted">질문</div>
+                            </div>
+                            <div class="col">
+                                <div class="fs-4 fw-bold" th:text="${#lists.size(answerList)}"></div>
+                                <div class="text-muted">답변</div>
+                            </div>
+                            <div class="col">
+                                <div class="fs-4 fw-bold" th:text="${#lists.size(commentList)}"></div>
+                                <div class="text-muted">댓글</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <section class="mb-5">
+        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+            <h4 class="mb-0">작성한 질문</h4>
+            <span class="text-muted small" th:text="|${#lists.size(questionList)}개|"></span>
+        </div>
+        <div class="list-group" th:if="${!#lists.isEmpty(questionList)}">
+            <a class="list-group-item list-group-item-action"
+               th:each="question : ${questionList}"
+               th:href="@{/question/{code}/detail/{number}(code=${questionCategoryCodeMap[question.id]}, number=${questionNumberMap[question.id]})}">
+                <div class="d-flex w-100 justify-content-between gap-3">
+                    <h6 class="mb-1 text-truncate" th:text="${question.subject}"></h6>
+                    <small class="text-muted text-nowrap"
+                           th:text="${#temporals.format(question.createDate, 'yyyy-MM-dd HH:mm')}"></small>
+                </div>
+                <div class="d-flex gap-2 small text-muted">
+                    <span th:if="${question.category != null}" th:text="${question.category.name}"></span>
+                    <span th:text="|답변 ${#lists.size(question.answerList)}개|"></span>
+                    <span th:text="|추천 ${#lists.size(question.voter)}개|"></span>
+                </div>
+            </a>
+        </div>
+        <div class="text-muted py-3" th:if="${#lists.isEmpty(questionList)}">작성한 질문이 없습니다.</div>
+    </section>
+
+    <section class="mb-5">
+        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+            <h4 class="mb-0">작성한 답변</h4>
+            <span class="text-muted small" th:text="|${#lists.size(answerList)}개|"></span>
+        </div>
+        <div class="list-group" th:if="${!#lists.isEmpty(answerList)}">
+            <a class="list-group-item list-group-item-action"
+               th:each="answer : ${answerList}"
+               th:href="@{/question/{code}/detail/{number}(code=${questionCategoryCodeMap[answer.question.id]}, number=${questionNumberMap[answer.question.id]})} + '#answer_' + ${answer.id}">
+                <div class="d-flex w-100 justify-content-between gap-3">
+                    <h6 class="mb-1 text-truncate" th:text="${answer.question.subject}"></h6>
+                    <small class="text-muted text-nowrap"
+                           th:text="${#temporals.format(answer.createDate, 'yyyy-MM-dd HH:mm')}"></small>
+                </div>
+                <p class="mb-1 text-truncate" th:text="${answer.content}"></p>
+                <div class="small text-muted" th:text="|추천 ${#lists.size(answer.voter)}개|"></div>
+            </a>
+        </div>
+        <div class="text-muted py-3" th:if="${#lists.isEmpty(answerList)}">작성한 답변이 없습니다.</div>
+    </section>
+
+    <section>
+        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+            <h4 class="mb-0">작성한 댓글</h4>
+            <span class="text-muted small" th:text="|${#lists.size(commentList)}개|"></span>
+        </div>
+        <div class="list-group" th:if="${!#lists.isEmpty(commentList)}">
+            <a class="list-group-item list-group-item-action"
+               th:each="comment : ${commentList}"
+               th:with="targetQuestion=${commentTargetQuestionMap[comment.id]}"
+               th:href="${targetQuestion != null} ? @{/question/{code}/detail/{number}(code=${questionCategoryCodeMap[targetQuestion.id]}, number=${questionNumberMap[targetQuestion.id]})} + '#comment_' + ${comment.id} : '#'">
+                <div class="d-flex w-100 justify-content-between gap-3">
+                    <h6 class="mb-1 text-truncate"
+                        th:text="${targetQuestion != null ? targetQuestion.subject : '연결된 글이 없습니다.'}"></h6>
+                    <small class="text-muted text-nowrap"
+                           th:text="${#temporals.format(comment.createDate, 'yyyy-MM-dd HH:mm')}"></small>
+                </div>
+                <p class="mb-1 text-truncate" th:text="${comment.content}"></p>
+                <div class="small text-muted" th:text="${comment.question != null ? '질문 댓글' : '답변 댓글'}"></div>
+            </a>
+        </div>
+        <div class="text-muted py-3" th:if="${#lists.isEmpty(commentList)}">작성한 댓글이 없습니다.</div>
+    </section>
+</div>
+</html>

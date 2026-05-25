@@ -381,6 +381,26 @@ class SbbApplicationTests {
 	}
 
 	@Test
+	void profileShowsAuthenticatedUsersActivity() throws Exception {
+		SiteUser author = createUser();
+		Question question = createQuestion("프로필 질문", "프로필 질문 내용", category("qna"), author, 0);
+		Answer answer = answerService.create(question, "프로필 답변 내용", author);
+		commentService.create(question, "프로필 질문 댓글", author);
+		commentService.create(answer, "프로필 답변 댓글", author);
+
+		mockMvc.perform(get("/user/profile").with(user(TEST_USERNAME)))
+				.andExpect(status().isOk())
+				.andExpect(view().name("profile"))
+				.andExpect(model().attributeExists("siteUser", "questionList", "answerList", "commentList",
+						"questionNumberMap", "questionCategoryCodeMap", "commentTargetQuestionMap"))
+				.andExpect(content().string(containsString("내 프로필")))
+				.andExpect(content().string(containsString("프로필 질문")))
+				.andExpect(content().string(containsString("프로필 답변 내용")))
+				.andExpect(content().string(containsString("프로필 질문 댓글")))
+				.andExpect(content().string(containsString("프로필 답변 댓글")));
+	}
+
+	@Test
 	void answerAndCommentModifyFormsKeepPagingParameters() throws Exception {
 		SiteUser author = createUser();
 		Question question = createQuestion("수정 폼 질문", "질문 내용", category("qna"), author, 0);
