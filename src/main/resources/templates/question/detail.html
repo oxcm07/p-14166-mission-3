@@ -173,35 +173,5 @@
         <input type="submit" value="답변등록" class="btn btn-primary my-2">
     </form>
 </div>
-<script layout:fragment="script" type='text/javascript'>
-    const delete_elements = document.getElementsByClassName("delete");
-    Array.from(delete_elements).forEach(function(element) {
-        element.addEventListener('click', function() {
-            if(confirm("정말로 삭제하시겠습니까?")) {
-                location.href = this.dataset.uri;
-            } // JS에서 if, for, while 같은 제어문 중괄호뒤에 세미콜론 붙이지 않음
-        });
-    });
-    const recommend_elements = document.getElementsByClassName("recommend");
-    Array.from(recommend_elements).forEach(function(element) {
-        element.addEventListener('click', function() {
-            if(confirm("정말로 추천하시겠습니까?")) {
-                location.href = this.dataset.uri;
-            }
-        });
-    });
-    const answer_page_elements = document.getElementsByClassName("answer-page-link");
-    Array.from(answer_page_elements).forEach(function(element) {
-        element.addEventListener('click', function() {
-            document.getElementById('answerPage').value = this.dataset.page;
-            document.getElementById('answerSearchForm').submit();
-        });
-    });
-    const answer_sort = document.getElementById("answer_sort");
-    answer_sort.addEventListener('change', function() {
-        document.getElementById('answerSort').value = this.value;
-        document.getElementById('answerPage').value = 1;
-        document.getElementById('answerSearchForm').submit();
-    });
-</script>
+<script layout:fragment="script" th:src="@{/js/question/detail.js}"></script>
 </html>
