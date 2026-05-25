@@ -1,6 +1,7 @@
 package com.mysite.sbb.answer;
 
 import com.mysite.sbb.CommonUtil;
+import com.mysite.sbb.comment.CommentForm;
 import com.mysite.sbb.question.Question;
 import com.mysite.sbb.question.QuestionService;
 import com.mysite.sbb.user.SiteUser;
@@ -61,6 +62,9 @@ public class AnswerController {
         model.addAttribute("answerPaging", answerPaging);
         model.addAttribute("answerContentMap", answerContentMap);
         model.addAttribute("answerSort", answerSort);
+        if (!model.containsAttribute("commentForm")) {
+            model.addAttribute("commentForm", new CommentForm());
+        }
     }
 
     @PreAuthorize("isAuthenticated()")

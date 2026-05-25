@@ -4,6 +4,7 @@ import com.mysite.sbb.CommonUtil;
 import com.mysite.sbb.answer.Answer;
 import com.mysite.sbb.answer.AnswerService;
 import com.mysite.sbb.answer.AnswerForm;
+import com.mysite.sbb.comment.CommentForm;
 import com.mysite.sbb.user.SiteUser;
 import com.mysite.sbb.user.UserService;
 import jakarta.validation.Valid;
@@ -40,7 +41,7 @@ public class QuestionController {
     }
 
     @GetMapping(value = "/detail/{id}")
-    public String detail(Model model, @PathVariable("id") Integer id, AnswerForm answerForm,
+    public String detail(Model model, @PathVariable("id") Integer id, AnswerForm answerForm, CommentForm commentForm,
                          @RequestParam(value = "answerPage", defaultValue = "0") int answerPage,
                          @RequestParam(value = "answerSort", defaultValue = "latest") String answerSort) {
         Question question = this.questionService.getQuestion(id);

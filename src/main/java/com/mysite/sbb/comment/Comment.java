@@ -1,21 +1,23 @@
-package com.mysite.sbb.answer;
+package com.mysite.sbb.comment;
 
-import com.mysite.sbb.comment.Comment;
+import com.mysite.sbb.answer.Answer;
 import com.mysite.sbb.question.Question;
 import com.mysite.sbb.user.SiteUser;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.ManyToOne;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
 
 @Getter
 @Setter
 @Entity
-public class Answer {
+public class Comment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
@@ -25,18 +27,14 @@ public class Answer {
 
     private LocalDateTime createDate;
 
+    private LocalDateTime modifyDate;
+
     @ManyToOne
     private Question question;
 
-    @OneToMany(mappedBy = "answer", cascade = CascadeType.REMOVE)
-    @OrderBy("createDate asc")
-    private List<Comment> commentList = new ArrayList<>();
+    @ManyToOne
+    private Answer answer;
 
     @ManyToOne
     private SiteUser author;
-
-    private LocalDateTime modifyDate;
-
-    @ManyToMany
-    Set<SiteUser> voter;
 }

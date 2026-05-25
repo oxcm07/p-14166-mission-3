@@ -1,6 +1,7 @@
 package com.mysite.sbb.question;
 
 import com.mysite.sbb.answer.Answer;
+import com.mysite.sbb.comment.Comment;
 import com.mysite.sbb.user.SiteUser;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -31,6 +32,10 @@ public class Question {
 
     @OneToMany(mappedBy = "question", cascade = {CascadeType.PERSIST, CascadeType.REMOVE})
     private List<Answer> answerList = new ArrayList<>();
+
+    @OneToMany(mappedBy = "question", cascade = CascadeType.REMOVE)
+    @OrderBy("createDate asc")
+    private List<Comment> commentList = new ArrayList<>();
 
     public void addAnswer(String content) {
         Answer answer = new Answer();
