@@ -16,6 +16,10 @@
                     <div class="mb-2">modified at</div>
                     <div th:text="${#temporals.format(question.modifyDate, 'yyyy-MM-dd HH:mm')}"></div>
                 </div>
+                <div class="badge bg-light text-dark p-2 text-start mx-3">
+                    <div class="mb-2">조회수</div>
+                    <div th:text="${question.viewCount}"></div>
+                </div>
                 <div class="badge bg-light text-dark p-2 text-start">
                     <div class="mb-2">
                         <span th:if="${question.author != null}" th:text="${question.author.username}"></span>

@@ -215,6 +215,19 @@ class SbbApplicationTests {
 	}
 
 	@Test
+	void questionDetailIncreasesAndShowsViewCount() throws Exception {
+		SiteUser author = createUser();
+		Question question = createQuestion("조회수 질문", "조회수 내용", category("qna"), author, 0);
+
+		mockMvc.perform(get("/question/qna/detail/1"))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("조회수")))
+				.andExpect(content().string(containsString(">1</div>")));
+
+		assertThat(questionRepository.findById(question.getId()).orElseThrow().getViewCount()).isEqualTo(1);
+	}
+
+	@Test
 	void questionDetailAnswerPageNumbersStartFromOne() throws Exception {
 		SiteUser author = createUser();
 		Question question = createQuestion("답변 페이지 질문", "질문 내용", category("qna"), author, 0);

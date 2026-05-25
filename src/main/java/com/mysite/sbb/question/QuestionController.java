@@ -62,6 +62,7 @@ public class QuestionController {
                          @RequestParam(value = "answerSort", defaultValue = "latest") String answerSort) {
         Category category = this.categoryService.getCategory(categoryCode);
         Question question = this.questionService.getQuestion(category, questionNumber);
+        question = this.questionService.increaseViewCount(question);
         addQuestionDetailAttributes(model, question, answerPage, answerSort);
         return "question/detail";
     }

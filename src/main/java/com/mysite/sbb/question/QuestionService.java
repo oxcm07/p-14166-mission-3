@@ -84,6 +84,12 @@ public class QuestionService {
         throw new DataNotFoundException("question not found");
     }
 
+    public Question increaseViewCount(Question question) {
+        Integer viewCount = question.getViewCount();
+        question.setViewCount(viewCount == null ? 1 : viewCount + 1);
+        return this.questionRepository.save(question);
+    }
+
     public long getCategoryQuestionNumber(Question question) {
         Category category = question.getCategory();
         if (category == null) {
