@@ -35,10 +35,16 @@
         </div>
     </div>
     <!-- 답변의 갯수 표시 -->
-    <h5 class="border-bottom my-3 py-2"
-        th:text="|${#lists.size(question.answerList)}개의 답변이 있습니다.|"></h5>
+    <div class="d-flex justify-content-between align-items-center border-bottom my-3 py-2">
+        <h5 class="mb-0" th:text="|${answerPaging.totalElements}개의 답변이 있습니다.|"></h5>
+        <select id="answer_sort" class="form-select w-auto">
+            <option value="latest" th:selected="${answerSort == 'latest'}">최신순</option>
+            <option value="recommend" th:selected="${answerSort == 'recommend'}">추천순</option>
+            <option value="old" th:selected="${answerSort == 'old'}">오래된순</option>
+        </select>
+    </div>
     <!-- 답변 반복 시작 -->
-    <div class="card my-3" th:each="answer : ${question.answerList}">
+    <div class="card my-3" th:each="answer : ${answerPaging}">
         <a th:id="|answer_${answer.id}|"></a> <!--앵커 태그의 id 속성은 유일한 값-->
         <div class="card-body">
             <!--이스케이프 처리를 하지 않고 출력하는 th:utext를 사용-->
@@ -57,22 +63,51 @@
             </div>
             <div class="my-3">
                 <a href="javascript:void(0);" class="recommend btn btn-sm btn-outline-secondary"
-                   th:data-uri="@{|/answer/vote/${answer.id}|}">
+                   th:data-uri="@{/answer/vote/{id}(id=${answer.id}, answerPage=${answerPaging.number}, answerSort=${answerSort})}">
                     추천
                     <span class="badge rounded-pill bg-success" th:text="${#lists.size(answer.voter)}"></span>
                 </a>
-                <a th:href="@{|/answer/modify/${answer.id}|}" class="btn btn-sm btn-outline-secondary"
+                <a th:href="@{/answer/modify/{id}(id=${answer.id}, answerPage=${answerPaging.number}, answerSort=${answerSort})}"
+                   class="btn btn-sm btn-outline-secondary"
                    sec:authorize="isAuthenticated()"
                    th:if="${answer.author != null and #authentication.getPrincipal().getUsername() == answer.author.username}">수정</a>
-                <a href="javascript:void(0);" th:data-uri="@{|/answer/delete/${answer.id}|}"
+                <a href="javascript:void(0);"
+                   th:data-uri="@{/answer/delete/{id}(id=${answer.id}, answerPage=${answerPaging.number}, answerSort=${answerSort})}"
                    class="delete btn btn-sm btn-outline-secondary" sec:authorize="isAuthenticated()"
                    th:if="${answer.author != null and #authentication.getPrincipal().getUsername() == answer.author.username}">삭제</a>
             </div>
         </div>
     </div>
     <!-- 답변 반복 끝  -->
+    <!-- 답변 페이징처리 시작 -->
+    <div th:if="${!answerPaging.isEmpty()}">
+        <ul class="pagination justify-content-center">
+            <li class="page-item" th:classappend="${!answerPaging.hasPrevious} ? 'disabled'">
+                <a class="page-link answer-page-link" href="javascript:void(0)" th:data-page="${answerPaging.number-1}">
+                    <span>이전</span>
+                </a>
+            </li>
+            <li th:each="page: ${#numbers.sequence(0, answerPaging.totalPages-1)}"
+                th:if="${page >= answerPaging.number-5 and page <= answerPaging.number+5}"
+                th:classappend="${page == answerPaging.number} ? 'active'" class="page-item">
+                <a th:text="${page}" class="page-link answer-page-link" href="javascript:void(0)" th:data-page="${page}"></a>
+            </li>
+            <li class="page-item" th:classappend="${!answerPaging.hasNext} ? 'disabled'">
+                <a class="page-link answer-page-link" href="javascript:void(0)" th:data-page="${answerPaging.number+1}">
+                    <span>다음</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+    <!-- 답변 페이징처리 끝 -->
+    <form th:action="@{|/question/detail/${question.id}|}" method="get" id="answerSearchForm">
+        <input type="hidden" id="answerPage" name="answerPage" th:value="${answerPaging.number}">
+        <input type="hidden" id="answerSort" name="answerSort" th:value="${answerSort}">
+    </form>
     <!-- 답변 작성 -->
     <form th:action="@{|/answer/create/${question.id}|}" th:object="${answerForm}" method="post" class="my-3">
+        <input type="hidden" name="answerPage" th:value="${answerPaging.number}">
+        <input type="hidden" name="answerSort" th:value="${answerSort}">
         <div th:replace="~{form_errors :: formErrorsFragment}"></div>
         <textarea sec:authorize="isAnonymous()" disabled th:field="*{content}" class="form-control" rows="10"></textarea>
         <textarea sec:authorize="isAuthenticated()" th:field="*{content}" class="form-control" rows="10"></textarea>
@@ -95,6 +130,19 @@
                 location.href = this.dataset.uri;
             }
         });
+    });
+    const answer_page_elements = document.getElementsByClassName("answer-page-link");
+    Array.from(answer_page_elements).forEach(function(element) {
+        element.addEventListener('click', function() {
+            document.getElementById('answerPage').value = this.dataset.page;
+            document.getElementById('answerSearchForm').submit();
+        });
+    });
+    const answer_sort = document.getElementById("answer_sort");
+    answer_sort.addEventListener('change', function() {
+        document.getElementById('answerSort').value = this.value;
+        document.getElementById('answerPage').value = 0;
+        document.getElementById('answerSearchForm').submit();
     });
 </script>
 </html>
