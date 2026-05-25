@@ -10,12 +10,19 @@ import com.mysite.sbb.comment.CommentRepository;
 import com.mysite.sbb.comment.CommentService;
 import com.mysite.sbb.question.Question;
 import com.mysite.sbb.question.QuestionRepository;
+import com.mysite.sbb.user.PasswordEmailSender;
 import com.mysite.sbb.user.SiteUser;
+import com.mysite.sbb.user.UserRepository;
 import com.mysite.sbb.user.UserService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,10 +69,24 @@ class SbbApplicationTests {
 	private UserService userService;
 
 	@Autowired
+	private UserRepository userRepository;
+
+	@Autowired
+	private PasswordEncoder passwordEncoder;
+
+	@Autowired
+	private TestPasswordEmailSender passwordEmailSender;
+
+	@Autowired
 	private AnswerService answerService;
 
 	@Autowired
 	private CommentService commentService;
+
+	@BeforeEach
+	void setUp() {
+		passwordEmailSender.reset();
+	}
 
 	@Test
 	void sbb() throws Exception {
@@ -244,6 +265,122 @@ class SbbApplicationTests {
 	}
 
 	@Test
+	void passwordResetSendsTemporaryPasswordAndUpdatesStoredPassword() throws Exception {
+		createUser();
+
+		mockMvc.perform(post("/user/password/reset")
+						.param("email", "testuser@example.com")
+						.with(csrf()))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(redirectedUrl("/user/login?reset"));
+
+		assertThat(passwordEmailSender.email).isEqualTo("testuser@example.com");
+		assertThat(passwordEmailSender.temporaryPassword).isNotBlank();
+
+		SiteUser user = userRepository.findByUsername(TEST_USERNAME).orElseThrow();
+		assertThat(passwordEncoder.matches(passwordEmailSender.temporaryPassword, user.getPassword())).isTrue();
+		assertThat(passwordEncoder.matches("1234", user.getPassword())).isFalse();
+
+		mockMvc.perform(post("/user/login")
+						.param("username", TEST_USERNAME)
+						.param("password", passwordEmailSender.temporaryPassword)
+						.with(csrf()))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(redirectedUrl("/"));
+	}
+
+	@Test
+	void passwordResetRejectsUnknownEmail() throws Exception {
+		mockMvc.perform(post("/user/password/reset")
+						.param("email", "unknown@example.com")
+						.with(csrf()))
+				.andExpect(status().isOk())
+				.andExpect(view().name("password_reset_form"))
+				.andExpect(model().hasErrors())
+				.andExpect(content().string(containsString("등록된 이메일을 찾을 수 없습니다.")));
+
+		assertThat(passwordEmailSender.email).isNull();
+		assertThat(passwordEmailSender.temporaryPassword).isNull();
+	}
+
+	@Test
+	void passwordResetKeepsCurrentPasswordWhenEmailSendingFails() throws Exception {
+		createUser();
+		passwordEmailSender.fail = true;
+
+		mockMvc.perform(post("/user/password/reset")
+						.param("email", "testuser@example.com")
+						.with(csrf()))
+				.andExpect(status().isOk())
+				.andExpect(view().name("password_reset_form"))
+				.andExpect(model().hasErrors())
+				.andExpect(content().string(containsString("임시 비밀번호 메일 발송에 실패했습니다.")));
+
+		SiteUser user = userRepository.findByUsername(TEST_USERNAME).orElseThrow();
+		assertThat(passwordEncoder.matches("1234", user.getPassword())).isTrue();
+	}
+
+	@Test
+	void passwordChangeUpdatesPasswordWhenCurrentPasswordMatches() throws Exception {
+		createUser();
+
+		mockMvc.perform(post("/user/password/change")
+						.param("currentPassword", "1234")
+						.param("newPassword1", "5678")
+						.param("newPassword2", "5678")
+						.with(user(TEST_USERNAME))
+						.with(csrf()))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(redirectedUrl("/user/password/change?success"));
+
+		SiteUser user = userRepository.findByUsername(TEST_USERNAME).orElseThrow();
+		assertThat(passwordEncoder.matches("5678", user.getPassword())).isTrue();
+		assertThat(passwordEncoder.matches("1234", user.getPassword())).isFalse();
+
+		mockMvc.perform(post("/user/login")
+						.param("username", TEST_USERNAME)
+						.param("password", "5678")
+						.with(csrf()))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(redirectedUrl("/"));
+	}
+
+	@Test
+	void passwordChangeRejectsWrongCurrentPassword() throws Exception {
+		createUser();
+
+		mockMvc.perform(post("/user/password/change")
+						.param("currentPassword", "wrong")
+						.param("newPassword1", "5678")
+						.param("newPassword2", "5678")
+						.with(user(TEST_USERNAME))
+						.with(csrf()))
+				.andExpect(status().isOk())
+				.andExpect(view().name("password_change_form"))
+				.andExpect(model().hasErrors())
+				.andExpect(content().string(containsString("기존 비밀번호가 일치하지 않습니다.")));
+
+		SiteUser user = userRepository.findByUsername(TEST_USERNAME).orElseThrow();
+		assertThat(passwordEncoder.matches("1234", user.getPassword())).isTrue();
+	}
+
+	@Test
+	void passwordChangeRejectsMismatchedNewPasswords() throws Exception {
+		createUser();
+
+		mockMvc.perform(post("/user/password/change")
+						.param("currentPassword", "1234")
+						.param("newPassword1", "5678")
+						.param("newPassword2", "9999")
+						.with(user(TEST_USERNAME))
+						.with(csrf()))
+				.andExpect(status().isOk())
+				.andExpect(view().name("password_change_form"))
+				.andExpect(model().hasErrors())
+				.andExpect(content().string(containsString("2개의 새 비밀번호가 일치하지 않습니다.")));
+	}
+
+	@Test
 	void answerAndCommentModifyFormsKeepPagingParameters() throws Exception {
 		SiteUser author = createUser();
 		Question question = createQuestion("수정 폼 질문", "질문 내용", category("qna"), author, 0);
@@ -289,4 +426,33 @@ class SbbApplicationTests {
 		return questionRepository.save(question);
 	}
 
+	@TestConfiguration
+	static class PasswordTestConfig {
+		@Bean
+		@Primary
+		TestPasswordEmailSender testPasswordEmailSender() {
+			return new TestPasswordEmailSender();
+		}
+	}
+
+	static class TestPasswordEmailSender implements PasswordEmailSender {
+		private String email;
+		private String temporaryPassword;
+		private boolean fail;
+
+		@Override
+		public void sendTemporaryPassword(String email, String temporaryPassword) {
+			this.email = email;
+			this.temporaryPassword = temporaryPassword;
+			if (this.fail) {
+				throw new IllegalStateException("email sending failed");
+			}
+		}
+
+		void reset() {
+			this.email = null;
+			this.temporaryPassword = null;
+			this.fail = false;
+		}
+	}
 }

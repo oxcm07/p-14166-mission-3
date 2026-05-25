@@ -4,6 +4,7 @@ import com.mysite.sbb.DataNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -12,6 +13,8 @@ import java.util.Optional;
 public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TemporaryPasswordGenerator temporaryPasswordGenerator;
+    private final PasswordEmailSender passwordEmailSender;
 
     public SiteUser create(String username, String email, String password) {
         SiteUser user = new SiteUser();
@@ -29,5 +32,26 @@ public class UserService {
         } else {
             throw new DataNotFoundException("siteuser not found");
         }
+    }
+
+    @Transactional
+    public void resetPassword(String email) {
+        SiteUser user = this.userRepository.findByEmail(email)
+                .orElseThrow(() -> new DataNotFoundException("siteuser not found"));
+        String temporaryPassword = this.temporaryPasswordGenerator.generate();
+        this.passwordEmailSender.sendTemporaryPassword(user.getEmail(), temporaryPassword);
+        user.setPassword(this.passwordEncoder.encode(temporaryPassword));
+        this.userRepository.save(user);
+    }
+
+    @Transactional
+    public boolean changePassword(String username, String currentPassword, String newPassword) {
+        SiteUser user = getUser(username);
+        if (!this.passwordEncoder.matches(currentPassword, user.getPassword())) {
+            return false;
+        }
+        user.setPassword(this.passwordEncoder.encode(newPassword));
+        this.userRepository.save(user);
+        return true;
     }
 }

@@ -6,6 +6,11 @@
         사용자ID 또는 비밀번호를 확인해 주세요.
       </div>
     </div>
+    <div th:if="${param.reset}">
+      <div class="alert alert-success">
+        임시 비밀번호를 이메일로 발송했습니다.
+      </div>
+    </div>
     <div class="mb-3">
       <label for="username" class="form-label">사용자ID</label>
       <input type="text" name="username" id="username" class="form-control">
@@ -15,6 +20,7 @@
       <input type="password" name="password" id="password" class="form-control">
     </div>
     <button type="submit" class="btn btn-primary">로그인</button>
+    <a th:href="@{/user/password/reset}" class="btn btn-link">비밀번호 찾기</a>
   </form>
 </div>
 </html>
