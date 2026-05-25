@@ -1,6 +1,17 @@
 package com.mysite.sbb;
 
+import com.mysite.sbb.answer.Answer;
+import com.mysite.sbb.answer.AnswerRepository;
+import com.mysite.sbb.answer.AnswerService;
+import com.mysite.sbb.category.Category;
+import com.mysite.sbb.category.CategoryService;
+import com.mysite.sbb.comment.Comment;
+import com.mysite.sbb.comment.CommentRepository;
+import com.mysite.sbb.comment.CommentService;
+import com.mysite.sbb.question.Question;
 import com.mysite.sbb.question.QuestionRepository;
+import com.mysite.sbb.user.SiteUser;
+import com.mysite.sbb.user.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -9,22 +20,52 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 @ActiveProfiles("test")
 @AutoConfigureMockMvc
 @SpringBootTest
 @Transactional
 class SbbApplicationTests {
+	private static final String TEST_USERNAME = "testuser";
 
 	@Autowired
 	private MockMvc mockMvc;
 
 	@Autowired
 	private QuestionRepository questionRepository;
+
+	@Autowired
+	private AnswerRepository answerRepository;
+
+	@Autowired
+	private CommentRepository commentRepository;
+
+	@Autowired
+	private CategoryService categoryService;
+
+	@Autowired
+	private UserService userService;
+
+	@Autowired
+	private AnswerService answerService;
+
+	@Autowired
+	private CommentService commentService;
 
 	@Test
 	void sbb() throws Exception {
@@ -34,8 +75,218 @@ class SbbApplicationTests {
 	}
 
 	@Test
+	void rootRedirectsToQnaQuestionList() throws Exception {
+		mockMvc.perform(get("/"))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(redirectedUrl("/question/qna/list"));
+	}
+
+	@Test
 	void testInitDataIsNotCreatedDuringTests() {
 		assertThat(questionRepository.count()).isZero();
+	}
+
+	@Test
+	void questionListShowsSelectedCategoryOnly() throws Exception {
+		SiteUser author = createUser();
+		Category qna = category("qna");
+		Category lecture = category("lecture");
+		createQuestion("qna 제목", "qna 내용", qna, author, 0);
+		createQuestion("lecture 제목", "lecture 내용", lecture, author, 1);
+
+		mockMvc.perform(get("/question/qna/list"))
+				.andExpect(status().isOk())
+				.andExpect(view().name("question_list"))
+				.andExpect(model().attributeExists("paging", "categoryList", "category", "questionNumberMap"))
+				.andExpect(content().string(containsString("질문답변")))
+				.andExpect(content().string(containsString("강좌")))
+				.andExpect(content().string(containsString("qna 제목")))
+				.andExpect(content().string(not(containsString("lecture 제목"))));
+	}
+
+	@Test
+	void questionListSearchesWithinCategory() throws Exception {
+		SiteUser author = createUser();
+		Category qna = category("qna");
+		createQuestion("스프링 검색 제목", "검색 대상", qna, author, 0);
+		createQuestion("다른 제목", "다른 내용", qna, author, 1);
+
+		mockMvc.perform(get("/question/qna/list").param("kw", "스프링"))
+				.andExpect(status().isOk())
+				.andExpect(model().attribute("kw", "스프링"))
+				.andExpect(content().string(containsString("스프링 검색 제목")))
+				.andExpect(content().string(not(containsString("다른 제목"))));
+	}
+
+	@Test
+	void questionDetailUsesCategoryQuestionNumber() throws Exception {
+		SiteUser author = createUser();
+		Category qna = category("qna");
+		createQuestion("첫번째 질문", "첫번째 내용", qna, author, 0);
+		Question secondQuestion = createQuestion("두번째 질문", "두번째 내용", qna, author, 1);
+
+		mockMvc.perform(get("/question/qna/detail/2"))
+				.andExpect(status().isOk())
+				.andExpect(view().name("question_detail"))
+				.andExpect(model().attribute("questionNumber", 2L))
+				.andExpect(model().attribute("question", secondQuestion))
+				.andExpect(content().string(containsString("두번째 질문")))
+				.andExpect(content().string(not(containsString("첫번째 질문"))));
+	}
+
+	@Test
+	void questionCreateFormUsesRequestedCategory() throws Exception {
+		createUser();
+
+		mockMvc.perform(get("/question/create")
+						.param("categoryCode", "free")
+						.with(user(TEST_USERNAME)))
+				.andExpect(status().isOk())
+				.andExpect(view().name("question_form"))
+				.andExpect(model().attributeExists("categoryList", "questionForm"))
+				.andExpect(model().attribute("formAction", "/question/create"))
+				.andExpect(content().string(containsString("자유게시판")));
+	}
+
+	@Test
+	void questionCreateSavesQuestionAndRedirectsToSelectedCategory() throws Exception {
+		createUser();
+
+		mockMvc.perform(post("/question/create")
+						.param("subject", "등록 테스트 제목")
+						.param("content", "등록 테스트 내용")
+						.param("categoryCode", "free")
+						.with(user(TEST_USERNAME))
+						.with(csrf()))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(redirectedUrl("/question/free/list"));
+
+		Question question = questionRepository.findAll().get(0);
+		assertThat(question.getSubject()).isEqualTo("등록 테스트 제목");
+		assertThat(question.getCategory().getCode()).isEqualTo("free");
+		assertThat(question.getAuthor().getUsername()).isEqualTo(TEST_USERNAME);
+	}
+
+	@Test
+	void questionModifyUpdatesQuestionAndCategory() throws Exception {
+		SiteUser author = createUser();
+		Question question = createQuestion("수정 전 제목", "수정 전 내용", category("qna"), author, 0);
+
+		mockMvc.perform(post("/question/modify/{id}", question.getId())
+						.param("subject", "수정 후 제목")
+						.param("content", "수정 후 내용")
+						.param("categoryCode", "lecture")
+						.with(user(TEST_USERNAME))
+						.with(csrf()))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(header().string("Location", "/question/lecture/detail/1"));
+
+		Question modifiedQuestion = questionRepository.findById(question.getId()).orElseThrow();
+		assertThat(modifiedQuestion.getSubject()).isEqualTo("수정 후 제목");
+		assertThat(modifiedQuestion.getContent()).isEqualTo("수정 후 내용");
+		assertThat(modifiedQuestion.getCategory().getCode()).isEqualTo("lecture");
+		assertThat(modifiedQuestion.getModifyDate()).isNotNull();
+	}
+
+	@Test
+	void answerCreateRedirectsToCategoryQuestionDetail() throws Exception {
+		SiteUser author = createUser();
+		Question question = createQuestion("답변 대상 질문", "질문 내용", category("qna"), author, 0);
+
+		mockMvc.perform(post("/answer/create/{id}", question.getId())
+						.param("content", "답변 테스트 내용")
+						.with(user(TEST_USERNAME))
+						.with(csrf()))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(header().string("Location", containsString("/question/qna/detail/1?answerPage=0&answerSort=latest#answer_")));
+
+		Answer answer = answerRepository.findAll().get(0);
+		assertThat(answer.getContent()).isEqualTo("답변 테스트 내용");
+		assertThat(answer.getQuestion().getId()).isEqualTo(question.getId());
+		assertThat(answer.getAuthor().getUsername()).isEqualTo(TEST_USERNAME);
+	}
+
+	@Test
+	void commentCreateOnQuestionRedirectsToCategoryQuestionDetail() throws Exception {
+		SiteUser author = createUser();
+		Question question = createQuestion("댓글 대상 질문", "질문 내용", category("qna"), author, 0);
+
+		mockMvc.perform(post("/comment/create/question/{id}", question.getId())
+						.param("content", "질문 댓글 내용")
+						.with(user(TEST_USERNAME))
+						.with(csrf()))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(header().string("Location", containsString("/question/qna/detail/1?answerPage=0&answerSort=latest#comment_")));
+
+		Comment comment = commentRepository.findAll().get(0);
+		assertThat(comment.getContent()).isEqualTo("질문 댓글 내용");
+		assertThat(comment.getQuestion().getId()).isEqualTo(question.getId());
+		assertThat(comment.getAuthor().getUsername()).isEqualTo(TEST_USERNAME);
+	}
+
+	@Test
+	void commentCreateOnAnswerRedirectsToCategoryQuestionDetail() throws Exception {
+		SiteUser author = createUser();
+		Question question = createQuestion("답변 댓글 대상 질문", "질문 내용", category("qna"), author, 0);
+		Answer answer = answerService.create(question, "답변 내용", author);
+
+		mockMvc.perform(post("/comment/create/answer/{id}", answer.getId())
+						.param("content", "답변 댓글 내용")
+						.with(user(TEST_USERNAME))
+						.with(csrf()))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(header().string("Location", containsString("/question/qna/detail/1?answerPage=0&answerSort=latest#comment_")));
+
+		Comment comment = commentRepository.findAll().get(0);
+		assertThat(comment.getContent()).isEqualTo("답변 댓글 내용");
+		assertThat(comment.getAnswer().getId()).isEqualTo(answer.getId());
+		assertThat(comment.getAuthor().getUsername()).isEqualTo(TEST_USERNAME);
+	}
+
+	@Test
+	void answerAndCommentModifyFormsKeepPagingParameters() throws Exception {
+		SiteUser author = createUser();
+		Question question = createQuestion("수정 폼 질문", "질문 내용", category("qna"), author, 0);
+		Answer answer = answerService.create(question, "수정 폼 답변", author);
+		Comment comment = commentService.create(question, "수정 폼 댓글", author);
+
+		mockMvc.perform(get("/answer/modify/{id}", answer.getId())
+						.param("answerPage", "2")
+						.param("answerSort", "old")
+						.with(user(TEST_USERNAME)))
+				.andExpect(status().isOk())
+				.andExpect(view().name("answer_form"))
+				.andExpect(model().attribute("answerPage", 2))
+				.andExpect(model().attribute("answerSort", "old"))
+				.andExpect(content().string(containsString("수정 폼 답변")));
+
+		mockMvc.perform(get("/comment/modify/{id}", comment.getId())
+						.param("answerPage", "3")
+						.param("answerSort", "recommend")
+						.with(user(TEST_USERNAME)))
+				.andExpect(status().isOk())
+				.andExpect(view().name("comment_form"))
+				.andExpect(model().attribute("answerPage", 3))
+				.andExpect(model().attribute("answerSort", "recommend"))
+				.andExpect(content().string(containsString("수정 폼 댓글")));
+	}
+
+	private SiteUser createUser() {
+		return userService.create(TEST_USERNAME, "testuser@example.com", "1234");
+	}
+
+	private Category category(String code) {
+		return categoryService.getCategory(code);
+	}
+
+	private Question createQuestion(String subject, String content, Category category, SiteUser author, int seconds) {
+		Question question = new Question();
+		question.setSubject(subject);
+		question.setContent(content);
+		question.setCategory(category);
+		question.setAuthor(author);
+		question.setCreateDate(LocalDateTime.of(2026, 1, 1, 0, 0).plusSeconds(seconds));
+		return questionRepository.save(question);
 	}
 
 }

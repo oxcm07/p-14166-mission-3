@@ -10,13 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 public interface QuestionRepository extends JpaRepository<Question, Integer> {
-    Question findBySubject(String subject);
-    Question findBySubjectAndContent(String subject, String content);
-    List<Question> findBySubjectLike(String subject);
-    Page<Question> findAll(Pageable pageable);
     Page<Question> findAll(Specification<Question> spec, Pageable pageable);
     Page<Question> findAllByCategory(Category category, Pageable pageable);
     long countByCategory(Category category);

@@ -10,6 +10,7 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -55,5 +56,5 @@ public class Question {
     private LocalDateTime modifyDate;
 
     @ManyToMany // 다대다 관계는 새로운 테이블 생성됨
-    Set<SiteUser> voter; // List와 달리 Set은 중복 불가능
+    Set<SiteUser> voter = new HashSet<>(); // List와 달리 Set은 중복 불가능
 }

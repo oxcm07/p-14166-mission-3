@@ -2,7 +2,6 @@ package com.mysite.sbb;
 
 import com.mysite.sbb.category.Category;
 import com.mysite.sbb.category.CategoryService;
-import com.mysite.sbb.answer.AnswerRepository;
 import com.mysite.sbb.question.Question;
 import com.mysite.sbb.question.QuestionRepository;
 import com.mysite.sbb.user.SiteUser;
@@ -31,7 +30,6 @@ public class TestInitData {
     @Lazy
     private TestInitData self;
     private final QuestionRepository questionRepository;
-    private final AnswerRepository answerRepository;
     private final CategoryService categoryService;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -49,7 +47,6 @@ public class TestInitData {
         Category questionAnswer = this.categoryService.getDefaultCategory();
         this.questionRepository.updateNullCategory(questionAnswer);
         SiteUser initUser = this.getInitUser();
-        this.assignAuthorToExistingData(initUser);
 
         if (questionRepository.count() > 0) return;
 
@@ -95,22 +92,6 @@ public class TestInitData {
                     user.setEmail(INIT_EMAIL);
                     user.setPassword(this.passwordEncoder.encode(INIT_PASSWORD));
                     return this.userRepository.save(user);
-                });
-    }
-
-    private void assignAuthorToExistingData(SiteUser initUser) {
-        this.questionRepository.findAll().stream()
-                .filter(question -> question.getAuthor() == null)
-                .forEach(question -> {
-                    question.setAuthor(initUser);
-                    this.questionRepository.save(question);
-                });
-
-        this.answerRepository.findAll().stream()
-                .filter(answer -> answer.getAuthor() == null)
-                .forEach(answer -> {
-                    answer.setAuthor(initUser);
-                    this.answerRepository.save(answer);
                 });
     }
 }
