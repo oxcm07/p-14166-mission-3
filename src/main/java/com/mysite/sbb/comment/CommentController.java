@@ -49,7 +49,7 @@ public class CommentController {
         if (bindingResult.hasErrors()) {
             model.addAttribute("answerForm", new AnswerForm());
             addQuestionDetailAttributes(model, question, answerPage, answerSort);
-            return "question_detail";
+            return "question/detail";
         }
         SiteUser siteUser = this.userService.getUser(principal.getName());
         Comment comment = this.commentService.create(question, commentForm.getContent(), siteUser);
@@ -69,7 +69,7 @@ public class CommentController {
         if (bindingResult.hasErrors()) {
             model.addAttribute("answerForm", new AnswerForm());
             addQuestionDetailAttributes(model, question, answerPage, answerSort);
-            return "question_detail";
+            return "question/detail";
         }
         SiteUser siteUser = this.userService.getUser(principal.getName());
         Comment comment = this.commentService.create(answer, commentForm.getContent(), siteUser);
@@ -103,7 +103,7 @@ public class CommentController {
         commentForm.setContent(comment.getContent());
         model.addAttribute("answerPage", answerPage);
         model.addAttribute("answerSort", answerSort);
-        return "comment_form";
+        return "comment/form";
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -115,7 +115,7 @@ public class CommentController {
         if (bindingResult.hasErrors()) {
             model.addAttribute("answerPage", answerPage);
             model.addAttribute("answerSort", answerSort);
-            return "comment_form";
+            return "comment/form";
         }
         Comment comment = this.commentService.getComment(id);
         if (!comment.getAuthor().getUsername().equals(principal.getName())) {

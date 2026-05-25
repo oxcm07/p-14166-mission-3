@@ -10,7 +10,7 @@ import com.mysite.sbb.comment.CommentRepository;
 import com.mysite.sbb.comment.CommentService;
 import com.mysite.sbb.question.Question;
 import com.mysite.sbb.question.QuestionRepository;
-import com.mysite.sbb.user.PasswordEmailSender;
+import com.mysite.sbb.password.PasswordEmailSender;
 import com.mysite.sbb.user.SiteUser;
 import com.mysite.sbb.user.UserRepository;
 import com.mysite.sbb.user.UserService;
@@ -117,7 +117,7 @@ class SbbApplicationTests {
 
 		mockMvc.perform(get("/question/qna/list"))
 				.andExpect(status().isOk())
-				.andExpect(view().name("question_list"))
+				.andExpect(view().name("question/list"))
 				.andExpect(model().attributeExists("paging", "categoryList", "category", "questionNumberMap"))
 				.andExpect(content().string(containsString("질문답변")))
 				.andExpect(content().string(containsString("강좌")))
@@ -168,7 +168,7 @@ class SbbApplicationTests {
 
 		mockMvc.perform(get("/question/qna/detail/2"))
 				.andExpect(status().isOk())
-				.andExpect(view().name("question_detail"))
+				.andExpect(view().name("question/detail"))
 				.andExpect(model().attribute("questionNumber", 2L))
 				.andExpect(model().attribute("question", secondQuestion))
 				.andExpect(content().string(containsString("두번째 질문")))
@@ -202,7 +202,7 @@ class SbbApplicationTests {
 						.param("categoryCode", "free")
 						.with(user(TEST_USERNAME)))
 				.andExpect(status().isOk())
-				.andExpect(view().name("question_form"))
+				.andExpect(view().name("question/form"))
 				.andExpect(model().attributeExists("categoryList", "questionForm"))
 				.andExpect(model().attribute("formAction", "/question/create"))
 				.andExpect(content().string(containsString("자유게시판")));
@@ -334,7 +334,7 @@ class SbbApplicationTests {
 						.param("email", "unknown@example.com")
 						.with(csrf()))
 				.andExpect(status().isOk())
-				.andExpect(view().name("password_reset_form"))
+				.andExpect(view().name("password/reset_form"))
 				.andExpect(model().hasErrors())
 				.andExpect(content().string(containsString("등록된 이메일을 찾을 수 없습니다.")));
 
@@ -351,7 +351,7 @@ class SbbApplicationTests {
 						.param("email", "testuser@example.com")
 						.with(csrf()))
 				.andExpect(status().isOk())
-				.andExpect(view().name("password_reset_form"))
+				.andExpect(view().name("password/reset_form"))
 				.andExpect(model().hasErrors())
 				.andExpect(content().string(containsString("임시 비밀번호 메일 발송에 실패했습니다.")));
 
@@ -395,7 +395,7 @@ class SbbApplicationTests {
 						.with(user(TEST_USERNAME))
 						.with(csrf()))
 				.andExpect(status().isOk())
-				.andExpect(view().name("password_change_form"))
+				.andExpect(view().name("password/change_form"))
 				.andExpect(model().hasErrors())
 				.andExpect(content().string(containsString("기존 비밀번호가 일치하지 않습니다.")));
 
@@ -414,7 +414,7 @@ class SbbApplicationTests {
 						.with(user(TEST_USERNAME))
 						.with(csrf()))
 				.andExpect(status().isOk())
-				.andExpect(view().name("password_change_form"))
+				.andExpect(view().name("password/change_form"))
 				.andExpect(model().hasErrors())
 				.andExpect(content().string(containsString("2개의 새 비밀번호가 일치하지 않습니다.")));
 	}
@@ -429,7 +429,7 @@ class SbbApplicationTests {
 
 		mockMvc.perform(get("/user/profile").with(user(TEST_USERNAME)))
 				.andExpect(status().isOk())
-				.andExpect(view().name("profile"))
+				.andExpect(view().name("user/profile"))
 				.andExpect(model().attributeExists("siteUser", "questionPaging", "answerPaging", "commentPaging",
 						"questionNumberMap", "questionCategoryCodeMap", "commentTargetQuestionMap"))
 				.andExpect(content().string(containsString("내 프로필")))
@@ -456,7 +456,7 @@ class SbbApplicationTests {
 						.param("commentPage", "2")
 						.with(user(TEST_USERNAME)))
 				.andExpect(status().isOk())
-				.andExpect(view().name("profile"))
+				.andExpect(view().name("user/profile"))
 				.andExpect(content().string(containsString("questionPage=2&amp;answerPage=2&amp;commentPage=1")))
 				.andExpect(content().string(containsString("questionPage=2&amp;answerPage=1&amp;commentPage=2")))
 				.andExpect(content().string(containsString("questionPage=1&amp;answerPage=2&amp;commentPage=2")))
@@ -477,7 +477,7 @@ class SbbApplicationTests {
 						.param("answerSort", "old")
 						.with(user(TEST_USERNAME)))
 				.andExpect(status().isOk())
-				.andExpect(view().name("answer_form"))
+				.andExpect(view().name("answer/form"))
 				.andExpect(model().attribute("answerPage", 2))
 				.andExpect(model().attribute("answerSort", "old"))
 				.andExpect(content().string(containsString("수정 폼 답변")));
@@ -487,7 +487,7 @@ class SbbApplicationTests {
 						.param("answerSort", "recommend")
 						.with(user(TEST_USERNAME)))
 				.andExpect(status().isOk())
-				.andExpect(view().name("comment_form"))
+				.andExpect(view().name("comment/form"))
 				.andExpect(model().attribute("answerPage", 3))
 				.andExpect(model().attribute("answerSort", "recommend"))
 				.andExpect(content().string(containsString("수정 폼 댓글")));

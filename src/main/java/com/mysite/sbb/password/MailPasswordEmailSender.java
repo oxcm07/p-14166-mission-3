@@ -1,4 +1,4 @@
-package com.mysite.sbb.user;
+package com.mysite.sbb.password;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

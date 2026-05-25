@@ -47,7 +47,7 @@ public class QuestionController {
         model.addAttribute("categoryList", this.categoryService.getList());
         model.addAttribute("category", category);
         model.addAttribute("questionNumberMap", questionNumberMap);
-        return "question_list";
+        return "question/list";
     }
 
     private int toZeroBasedPage(int page) {
@@ -63,7 +63,7 @@ public class QuestionController {
         Category category = this.categoryService.getCategory(categoryCode);
         Question question = this.questionService.getQuestion(category, questionNumber);
         addQuestionDetailAttributes(model, question, answerPage, answerSort);
-        return "question_detail";
+        return "question/detail";
     }
 
     private void addQuestionDetailAttributes(Model model, Question question, int answerPage, String answerSort) {
@@ -96,7 +96,7 @@ public class QuestionController {
         questionForm.setCategoryCode(category.getCode());
         model.addAttribute("categoryList", this.categoryService.getList());
         model.addAttribute("formAction", "/question/create");
-        return "question_form";
+        return "question/form";
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -106,7 +106,7 @@ public class QuestionController {
         if (bindingResult.hasErrors()) {
             model.addAttribute("categoryList", this.categoryService.getList());
             model.addAttribute("formAction", "/question/create");
-            return "question_form";
+            return "question/form";
         }
         SiteUser siteUser = this.userService.getUser(principal.getName());
         Category category = this.categoryService.getCategoryOrDefault(questionForm.getCategoryCode());
@@ -129,7 +129,7 @@ public class QuestionController {
         }
         model.addAttribute("categoryList", this.categoryService.getList());
         model.addAttribute("formAction", String.format("/question/modify/%s", id));
-        return "question_form";
+        return "question/form";
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -139,7 +139,7 @@ public class QuestionController {
         if (bindingResult.hasErrors()) {
             model.addAttribute("categoryList", this.categoryService.getList());
             model.addAttribute("formAction", String.format("/question/modify/%s", id));
-            return "question_form";
+            return "question/form";
         }
         Question question = this.questionService.getQuestion(id);
         if (!question.getAuthor().getUsername().equals(principal.getName())) {

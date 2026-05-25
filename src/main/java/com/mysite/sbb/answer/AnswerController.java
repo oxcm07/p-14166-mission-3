@@ -45,7 +45,7 @@ public class AnswerController {
         SiteUser siteUser = this.userService.getUser(principal.getName());
         if (bindingResult.hasErrors()) {
             addQuestionDetailAttributes(model, question, answerPage, answerSort);
-            return "question_detail";
+            return "question/detail";
         }
         Answer answer = this.answerService.create(question, answerForm.getContent(), siteUser);
         // 답변 등록 후 앵커로 스크롤을 이동시키기 위해 #answer_%s 추가
@@ -82,7 +82,7 @@ public class AnswerController {
         answerForm.setContent(answer.getContent());
         model.addAttribute("answerPage", answerPage);
         model.addAttribute("answerSort", answerSort);
-        return "answer_form";
+        return "answer/form";
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -94,7 +94,7 @@ public class AnswerController {
         if (bindingResult.hasErrors()) {
             model.addAttribute("answerPage", answerPage);
             model.addAttribute("answerSort", answerSort);
-            return "answer_form";
+            return "answer/form";
         }
         Answer answer = this.answerService.getAnswer(id);
         if (!answer.getAuthor().getUsername().equals(principal.getName())) {

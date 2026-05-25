@@ -1,4 +1,4 @@
-<html layout:decorate="~{layout}">
+<html layout:decorate="~{layout/base}">
 <div layout:fragment="content" class="container my-3">
     <div class="my-3 border-bottom">
         <div>
@@ -6,7 +6,7 @@
         </div>
     </div>
     <form th:action="@{/user/password/reset}" th:object="${passwordResetForm}" method="post">
-        <div th:replace="~{form_errors :: formErrorsFragment}"></div>
+        <div th:replace="~{layout/form_errors :: formErrorsFragment}"></div>
         <div class="mb-3">
             <label for="email" class="form-label">가입 이메일</label>
             <input type="email" th:field="*{email}" class="form-control">
