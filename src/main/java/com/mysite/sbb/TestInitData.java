@@ -6,21 +6,19 @@ import com.mysite.sbb.question.Question;
 import com.mysite.sbb.question.QuestionRepository;
 import com.mysite.sbb.user.SiteUser;
 import com.mysite.sbb.user.UserRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
 @Configuration
-@Profile("!test")
-@RequiredArgsConstructor
 public class TestInitData {
     private static final String INIT_USERNAME = "testuser";
     private static final String INIT_EMAIL = "testuser@sbb.local";
@@ -33,8 +31,23 @@ public class TestInitData {
     private final CategoryService categoryService;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final boolean enabled;
+
+    public TestInitData(
+            QuestionRepository questionRepository,
+            CategoryService categoryService,
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            @Value("${sbb.test-init-data.enabled:false}") boolean enabled) {
+        this.questionRepository = questionRepository;
+        this.categoryService = categoryService;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.enabled = enabled;
+    }
 
     @Bean
+    @Order(1)
     public ApplicationRunner testInitDataApplicationRunner() {
         return args -> {
             self.work1();
@@ -43,13 +56,11 @@ public class TestInitData {
 
     @Transactional
     void work1() {
-        this.categoryService.initializeDefaultCategories();
-        Category questionAnswer = this.categoryService.getDefaultCategory();
-        this.questionRepository.updateNullCategory(questionAnswer);
-        SiteUser initUser = this.getInitUser();
-
+        if (!this.enabled) return;
         if (questionRepository.count() > 0) return;
 
+        Category questionAnswer = this.categoryService.getDefaultCategory();
+        SiteUser initUser = this.getInitUser();
         LocalDateTime baseDateTime = LocalDateTime.now();
 
         for (int i = 0; i <= 150; i++) {

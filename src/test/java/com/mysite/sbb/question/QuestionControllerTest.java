@@ -196,4 +196,60 @@ class QuestionControllerTest extends AbstractSbbIntegrationTest {
 		assertThat(modifiedQuestion.getCategory().getCode()).isEqualTo("lecture");
 		assertThat(modifiedQuestion.getModifyDate()).isNotNull();
 	}
+
+	@Test
+	void questionModifyAndDeleteWithMissingAuthorReturnBadRequest() throws Exception {
+		createUser();
+		Question question = createQuestion("작성자 없는 질문", "작성자 없는 내용", category("qna"), null, 0);
+
+		mockMvc.perform(get("/question/modify/{id}", question.getId()).with(user(TEST_USERNAME)))
+				.andExpect(status().isBadRequest());
+
+		mockMvc.perform(post("/question/modify/{id}", question.getId())
+						.param("subject", "수정 제목")
+						.param("content", "수정 내용")
+						.param("categoryCode", "qna")
+						.with(user(TEST_USERNAME))
+						.with(csrf()))
+				.andExpect(status().isBadRequest());
+
+		mockMvc.perform(post("/question/delete/{id}", question.getId())
+						.with(user(TEST_USERNAME))
+						.with(csrf()))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void questionVoteRequiresPost() throws Exception {
+		SiteUser author = createUser();
+		Question question = createQuestion("추천 질문", "추천 내용", category("qna"), author, 0);
+
+		mockMvc.perform(get("/question/vote/{id}", question.getId()).with(user(TEST_USERNAME)))
+				.andExpect(status().isMethodNotAllowed());
+
+		mockMvc.perform(post("/question/vote/{id}", question.getId())
+						.with(user(TEST_USERNAME))
+						.with(csrf()))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(header().string("Location", "/question/qna/detail/1"));
+
+		assertThat(questionRepository.findById(question.getId()).orElseThrow().getVoter()).hasSize(1);
+	}
+
+	@Test
+	void questionDeleteRequiresPost() throws Exception {
+		SiteUser author = createUser();
+		Question question = createQuestion("삭제 질문", "삭제 내용", category("qna"), author, 0);
+
+		mockMvc.perform(get("/question/delete/{id}", question.getId()).with(user(TEST_USERNAME)))
+				.andExpect(status().isMethodNotAllowed());
+
+		mockMvc.perform(post("/question/delete/{id}", question.getId())
+						.with(user(TEST_USERNAME))
+						.with(csrf()))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(header().string("Location", "/question/qna/list"));
+
+		assertThat(questionRepository.findById(question.getId())).isEmpty();
+	}
 }

@@ -16,14 +16,20 @@ public class PasswordService {
     private final TemporaryPasswordGenerator temporaryPasswordGenerator;
     private final PasswordEmailSender passwordEmailSender;
 
-    @Transactional
     public void resetPassword(String email) {
         SiteUser user = this.userRepository.findByEmail(email)
                 .orElseThrow(() -> new DataNotFoundException("siteuser not found"));
+        String previousPassword = user.getPassword();
         String temporaryPassword = this.temporaryPasswordGenerator.generate();
-        this.passwordEmailSender.sendTemporaryPassword(user.getEmail(), temporaryPassword);
         user.setPassword(this.passwordEncoder.encode(temporaryPassword));
-        this.userRepository.save(user);
+        this.userRepository.saveAndFlush(user);
+        try {
+            this.passwordEmailSender.sendTemporaryPassword(user.getEmail(), temporaryPassword);
+        } catch (RuntimeException e) {
+            user.setPassword(previousPassword);
+            this.userRepository.saveAndFlush(user);
+            throw e;
+        }
     }
 
     @Transactional

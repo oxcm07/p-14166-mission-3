@@ -8,16 +8,19 @@
     <div class="list-group" th:if="${!paging.isEmpty()}">
         <a class="list-group-item list-group-item-action"
            th:each="answer : ${paging}"
-           th:href="@{/question/{code}/detail/{number}(code=${questionCategoryCodeMap[answer.question.id]}, number=${questionNumberMap[answer.question.id]})} + '#answer_' + ${answer.id}">
+           th:with="targetQuestion=${answer.question}"
+           th:href="${targetQuestion != null} ? @{/question/{code}/detail/{number}(code=${questionCategoryCodeMap[targetQuestion.id]}, number=${questionNumberMap[targetQuestion.id]})} + '#answer_' + ${answer.id} : '#'">
             <div class="d-flex w-100 justify-content-between gap-3">
-                <h6 class="mb-1 text-truncate" th:text="${answer.question.subject}"></h6>
+                <h6 class="mb-1 text-truncate"
+                    th:text="${targetQuestion != null ? targetQuestion.subject : '연결된 글이 없습니다.'}"></h6>
                 <small class="text-muted text-nowrap"
                        th:text="${#temporals.format(answer.createDate, 'yyyy-MM-dd HH:mm')}"></small>
             </div>
             <p class="mb-1 text-truncate" th:text="${answer.content}"></p>
             <div class="d-flex gap-2 small text-muted">
                 <span th:if="${answer.author != null}" th:text="${answer.author.username}"></span>
-                <span th:if="${answer.question.category != null}" th:text="${answer.question.category.name}"></span>
+                <span th:if="${targetQuestion != null and targetQuestion.category != null}"
+                      th:text="${targetQuestion.category.name}"></span>
                 <span th:text="|추천 ${#lists.size(answer.voter)}개|"></span>
             </div>
         </a>

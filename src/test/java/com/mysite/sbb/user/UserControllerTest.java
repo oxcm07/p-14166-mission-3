@@ -2,15 +2,21 @@ package com.mysite.sbb.user;
 
 import com.mysite.sbb.AbstractSbbIntegrationTest;
 import com.mysite.sbb.answer.Answer;
+import com.mysite.sbb.comment.Comment;
 import com.mysite.sbb.question.Question;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDateTime;
+
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
@@ -60,5 +66,67 @@ class UserControllerTest extends AbstractSbbIntegrationTest {
 				.andExpect(content().string(containsString("프로필 페이지 질문 원본")))
 				.andExpect(content().string(containsString("프로필 페이지 답변 1")))
 				.andExpect(content().string(containsString("프로필 페이지 댓글 1")));
+	}
+
+	@Test
+	void profileHandlesAnswerWithoutQuestion() throws Exception {
+		SiteUser author = createUser();
+		Answer answer = new Answer();
+		answer.setContent("질문 없는 프로필 답변");
+		answer.setAuthor(author);
+		answer.setCreateDate(LocalDateTime.of(2026, 1, 1, 0, 0));
+		answerRepository.save(answer);
+
+		mockMvc.perform(get("/user/profile").with(user(TEST_USERNAME)))
+				.andExpect(status().isOk())
+				.andExpect(view().name("user/profile"))
+				.andExpect(content().string(containsString("연결된 글이 없습니다.")))
+				.andExpect(content().string(containsString("질문 없는 프로필 답변")))
+				.andExpect(content().string(containsString("href=\"#\"")));
+	}
+
+	@Test
+	void profileHandlesCommentsWithoutTargetQuestion() throws Exception {
+		SiteUser author = createUser();
+		Answer answer = new Answer();
+		answer.setContent("질문 없는 답변");
+		answer.setAuthor(author);
+		answer.setCreateDate(LocalDateTime.of(2026, 1, 1, 0, 0));
+		answerRepository.save(answer);
+
+		createComment(answer, "질문 없는 답변의 댓글", author, 1);
+		Comment orphanComment = new Comment();
+		orphanComment.setContent("대상 없는 프로필 댓글");
+		orphanComment.setAuthor(author);
+		orphanComment.setCreateDate(LocalDateTime.of(2026, 1, 1, 0, 2));
+		commentRepository.save(orphanComment);
+
+		mockMvc.perform(get("/user/profile").with(user(TEST_USERNAME)))
+				.andExpect(status().isOk())
+				.andExpect(view().name("user/profile"))
+				.andExpect(content().string(containsString("질문 없는 답변의 댓글")))
+				.andExpect(content().string(containsString("대상 없는 프로필 댓글")))
+				.andExpect(content().string(containsString("연결된 글이 없습니다.")))
+				.andExpect(content().string(containsString("연결 없음")));
+	}
+
+	@Test
+	void logoutUsesPostWithCsrf() throws Exception {
+		createUser();
+
+		mockMvc.perform(get("/user/profile").with(user(TEST_USERNAME)))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("action=\"/user/logout\"")))
+				.andExpect(content().string(containsString("method=\"post\"")))
+				.andExpect(content().string(not(containsString("href=\"/user/logout\""))));
+
+		mockMvc.perform(get("/user/logout").with(user(TEST_USERNAME)))
+				.andExpect(status().isNotFound());
+
+		mockMvc.perform(post("/user/logout")
+						.with(user(TEST_USERNAME))
+						.with(csrf()))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(redirectedUrl("/"));
 	}
 }

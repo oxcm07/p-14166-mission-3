@@ -93,9 +93,11 @@
         <div class="list-group" th:if="${!answerPaging.isEmpty()}">
             <a class="list-group-item list-group-item-action"
                th:each="answer : ${answerPaging}"
-               th:href="@{/question/{code}/detail/{number}(code=${questionCategoryCodeMap[answer.question.id]}, number=${questionNumberMap[answer.question.id]})} + '#answer_' + ${answer.id}">
+               th:with="targetQuestion=${answer.question}"
+               th:href="${targetQuestion != null} ? @{/question/{code}/detail/{number}(code=${questionCategoryCodeMap[targetQuestion.id]}, number=${questionNumberMap[targetQuestion.id]})} + '#answer_' + ${answer.id} : '#'">
                 <div class="d-flex w-100 justify-content-between gap-3">
-                    <h6 class="mb-1 text-truncate" th:text="${answer.question.subject}"></h6>
+                    <h6 class="mb-1 text-truncate"
+                        th:text="${targetQuestion != null ? targetQuestion.subject : '연결된 글이 없습니다.'}"></h6>
                     <small class="text-muted text-nowrap"
                            th:text="${#temporals.format(answer.createDate, 'yyyy-MM-dd HH:mm')}"></small>
                 </div>
@@ -143,7 +145,7 @@
                            th:text="${#temporals.format(comment.createDate, 'yyyy-MM-dd HH:mm')}"></small>
                 </div>
                 <p class="mb-1 text-truncate" th:text="${comment.content}"></p>
-                <div class="small text-muted" th:text="${comment.question != null ? '질문 댓글' : '답변 댓글'}"></div>
+                <div class="small text-muted" th:text="${comment.question != null ? '질문 댓글' : (comment.answer != null ? '답변 댓글' : '연결 없음')}"></div>
             </a>
         </div>
         <div class="text-muted py-3" th:if="${commentPaging.isEmpty()}">작성한 댓글이 없습니다.</div>

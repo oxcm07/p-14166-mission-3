@@ -1,20 +1,16 @@
-const deleteElements = document.getElementsByClassName("delete");
-Array.from(deleteElements).forEach(function(element) {
-    element.addEventListener("click", function() {
-        if (confirm("정말로 삭제하시겠습니까?")) {
-            location.href = this.dataset.uri;
-        }
+function confirmSubmit(formClassName, message) {
+    const formElements = document.getElementsByClassName(formClassName);
+    Array.from(formElements).forEach(function(element) {
+        element.addEventListener("submit", function(event) {
+            if (!confirm(message)) {
+                event.preventDefault();
+            }
+        });
     });
-});
+}
 
-const recommendElements = document.getElementsByClassName("recommend");
-Array.from(recommendElements).forEach(function(element) {
-    element.addEventListener("click", function() {
-        if (confirm("정말로 추천하시겠습니까?")) {
-            location.href = this.dataset.uri;
-        }
-    });
-});
+confirmSubmit("delete-form", "정말로 삭제하시겠습니까?");
+confirmSubmit("recommend-form", "정말로 추천하시겠습니까?");
 
 const answerPageElements = document.getElementsByClassName("answer-page-link");
 Array.from(answerPageElements).forEach(function(element) {

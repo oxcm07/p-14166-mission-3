@@ -130,8 +130,9 @@ public class UserController {
         if (comment.getQuestion() != null) {
             return comment.getQuestion();
         }
-        if (comment.getAnswer() != null) {
-            return comment.getAnswer().getQuestion();
+        Answer answer = comment.getAnswer();
+        if (answer != null) {
+            return answer.getQuestion();
         }
         return null;
     }

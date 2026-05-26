@@ -1,6 +1,8 @@
 package com.mysite.sbb;
 
 import org.commonmark.node.Node;
+import org.commonmark.ext.gfm.tables.TablesExtension;
+import org.commonmark.Extension;
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.DefaultUrlSanitizer;
 import org.commonmark.renderer.html.HtmlRenderer;
@@ -12,8 +14,12 @@ import java.util.List;
 
 @Component
 public class CommonUtil {
-    private final Parser parser = Parser.builder().build();
+    private final List<Extension> extensions = List.of(TablesExtension.create());
+    private final Parser parser = Parser.builder()
+            .extensions(extensions)
+            .build();
     private final HtmlRenderer renderer = HtmlRenderer.builder()
+            .extensions(extensions)
             .escapeHtml(true)
             .sanitizeUrls(true)
             .urlSanitizer(new DefaultUrlSanitizer(List.of("http", "https", "mailto")))

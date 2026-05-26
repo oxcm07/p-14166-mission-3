@@ -11,17 +11,17 @@
     <div class="card my-3">
         <div class="card-body">
             <!--최신 타임리프는 HTML 템플릿 안에서 @beanName 형태로 스프링 빈을 직접 호출하는 기능을 기본적으로 차단-->
-            <div class="card-text" th:utext="${questionContent}"></div>
+            <div class="card-text markdown-content" th:utext="${questionContent}"></div>
             <div class="d-flex justify-content-end">
-                <div th:if="${question.modifyDate != null}" class="badge bg-light text-dark p-2 text-start mx-3">
+                <div th:if="${question.modifyDate != null}" class="badge meta-badge p-2 text-start mx-3">
                     <div class="mb-2">modified at</div>
                     <div th:text="${#temporals.format(question.modifyDate, 'yyyy-MM-dd HH:mm')}"></div>
                 </div>
-                <div class="badge bg-light text-dark p-2 text-start mx-3">
+                <div class="badge meta-badge p-2 text-start mx-3">
                     <div class="mb-2">조회수</div>
                     <div th:text="${question.viewCount}"></div>
                 </div>
-                <div class="badge bg-light text-dark p-2 text-start">
+                <div class="badge meta-badge p-2 text-start">
                     <div class="mb-2">
                         <span th:if="${question.author != null}" th:text="${question.author.username}"></span>
                     </div>
@@ -29,18 +29,21 @@
                 </div>
             </div>
             <div class="my-3">
-                <a href="javascript:void(0);" class="recommend btn btn-sm btn-outline-secondary"
-                   th:data-uri="@{|/question/vote/${question.id}|}">
-                    추천
-                    <span class="badge rounded-pill bg-success" th:text="${#lists.size(question.voter)}"></span>
-                </a>
+                <form th:action="@{|/question/vote/${question.id}|}" method="post" class="d-inline recommend-form">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">
+                        추천
+                        <span class="badge rounded-pill bg-success" th:text="${#lists.size(question.voter)}"></span>
+                    </button>
+                </form>
                 <a th:href="@{|/question/modify/${question.id}|}" class="btn btn-sm btn-outline-secondary"
                    sec:authorize="isAuthenticated()"
                     <!--문자열 리터럴로 쓰려면 th:text="'수정'"처럼 따옴표를 한 번 더 넣거나, 그냥 태그 안에 수정 텍스트를 직접 넣음-->
                    th:if="${question.author != null and #authentication.getPrincipal().getUsername() == question.author.username}">수정</a>
-                <a href="javascript:void(0);" th:data-uri="@{|/question/delete/${question.id}|}"
-                   class="delete btn btn-sm btn-outline-secondary" sec:authorize="isAuthenticated()"
-                   th:if="${question.author != null and #authentication.getPrincipal().getUsername() == question.author.username}">삭제</a>
+                <form th:action="@{|/question/delete/${question.id}|}" method="post" class="d-inline delete-form"
+                      sec:authorize="isAuthenticated()"
+                      th:if="${question.author != null and #authentication.getPrincipal().getUsername() == question.author.username}">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">삭제</button>
+                </form>
             </div>
             <div class="border-top pt-3 mt-3">
                 <div class="small text-muted mb-2" th:text="|${#lists.size(question.commentList)}개의 댓글|"></div>
@@ -55,11 +58,12 @@
                            class="btn btn-sm btn-outline-secondary"
                            sec:authorize="isAuthenticated()"
                            th:if="${comment.author != null and #authentication.getPrincipal().getUsername() == comment.author.username}">수정</a>
-                        <a href="javascript:void(0);"
-                           th:data-uri="@{/comment/delete/{id}(id=${comment.id}, answerPage=${answerPaging.number + 1}, answerSort=${answerSort})}"
-                           class="delete btn btn-sm btn-outline-secondary"
-                           sec:authorize="isAuthenticated()"
-                           th:if="${comment.author != null and #authentication.getPrincipal().getUsername() == comment.author.username}">삭제</a>
+                        <form th:action="@{/comment/delete/{id}(id=${comment.id}, answerPage=${answerPaging.number + 1}, answerSort=${answerSort})}"
+                              method="post" class="d-inline delete-form"
+                              sec:authorize="isAuthenticated()"
+                              th:if="${comment.author != null and #authentication.getPrincipal().getUsername() == comment.author.username}">
+                            <button type="submit" class="btn btn-sm btn-outline-secondary">삭제</button>
+                        </form>
                     </div>
                 </div>
                 <form sec:authorize="isAuthenticated()"
@@ -85,13 +89,13 @@
         <a th:id="|answer_${answer.id}|"></a> <!--앵커 태그의 id 속성은 유일한 값-->
         <div class="card-body">
             <!--이스케이프 처리를 하지 않고 출력하는 th:utext를 사용-->
-            <div class="card-text" th:utext="${answerContentMap[answer.id]}"></div>
+            <div class="card-text markdown-content" th:utext="${answerContentMap[answer.id]}"></div>
             <div class="d-flex justify-content-end">
-                <div th:if="${answer.modifyDate != null}" class="badge bg-light text-dark p-2 text-start mx-3">
+                <div th:if="${answer.modifyDate != null}" class="badge meta-badge p-2 text-start mx-3">
                     <div class="mb-2">modified at</div>
                     <div th:text="${#temporals.format(answer.modifyDate, 'yyyy-MM-dd HH:mm')}"></div>
                 </div>
-                <div class="badge bg-light text-dark p-2 text-start">
+                <div class="badge meta-badge p-2 text-start">
                     <div class="mb-2">
                         <span th:if="${answer.author != null}" th:text="${answer.author.username}"></span>
                     </div>
@@ -99,19 +103,22 @@
                 </div>
             </div>
             <div class="my-3">
-                <a href="javascript:void(0);" class="recommend btn btn-sm btn-outline-secondary"
-                   th:data-uri="@{/answer/vote/{id}(id=${answer.id}, answerPage=${answerPaging.number + 1}, answerSort=${answerSort})}">
-                    추천
-                    <span class="badge rounded-pill bg-success" th:text="${#lists.size(answer.voter)}"></span>
-                </a>
+                <form th:action="@{/answer/vote/{id}(id=${answer.id}, answerPage=${answerPaging.number + 1}, answerSort=${answerSort})}"
+                      method="post" class="d-inline recommend-form">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">
+                        추천
+                        <span class="badge rounded-pill bg-success" th:text="${#lists.size(answer.voter)}"></span>
+                    </button>
+                </form>
                 <a th:href="@{/answer/modify/{id}(id=${answer.id}, answerPage=${answerPaging.number + 1}, answerSort=${answerSort})}"
                    class="btn btn-sm btn-outline-secondary"
                    sec:authorize="isAuthenticated()"
                    th:if="${answer.author != null and #authentication.getPrincipal().getUsername() == answer.author.username}">수정</a>
-                <a href="javascript:void(0);"
-                   th:data-uri="@{/answer/delete/{id}(id=${answer.id}, answerPage=${answerPaging.number + 1}, answerSort=${answerSort})}"
-                   class="delete btn btn-sm btn-outline-secondary" sec:authorize="isAuthenticated()"
-                   th:if="${answer.author != null and #authentication.getPrincipal().getUsername() == answer.author.username}">삭제</a>
+                <form th:action="@{/answer/delete/{id}(id=${answer.id}, answerPage=${answerPaging.number + 1}, answerSort=${answerSort})}"
+                      method="post" class="d-inline delete-form" sec:authorize="isAuthenticated()"
+                      th:if="${answer.author != null and #authentication.getPrincipal().getUsername() == answer.author.username}">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">삭제</button>
+                </form>
             </div>
             <div class="border-top pt-3 mt-3">
                 <div class="small text-muted mb-2" th:text="|${#lists.size(answer.commentList)}개의 댓글|"></div>
@@ -126,11 +133,12 @@
                            class="btn btn-sm btn-outline-secondary"
                            sec:authorize="isAuthenticated()"
                            th:if="${comment.author != null and #authentication.getPrincipal().getUsername() == comment.author.username}">수정</a>
-                        <a href="javascript:void(0);"
-                           th:data-uri="@{/comment/delete/{id}(id=${comment.id}, answerPage=${answerPaging.number + 1}, answerSort=${answerSort})}"
-                           class="delete btn btn-sm btn-outline-secondary"
-                           sec:authorize="isAuthenticated()"
-                           th:if="${comment.author != null and #authentication.getPrincipal().getUsername() == comment.author.username}">삭제</a>
+                        <form th:action="@{/comment/delete/{id}(id=${comment.id}, answerPage=${answerPaging.number + 1}, answerSort=${answerSort})}"
+                              method="post" class="d-inline delete-form"
+                              sec:authorize="isAuthenticated()"
+                              th:if="${comment.author != null and #authentication.getPrincipal().getUsername() == comment.author.username}">
+                            <button type="submit" class="btn btn-sm btn-outline-secondary">삭제</button>
+                        </form>
                     </div>
                 </div>
                 <form sec:authorize="isAuthenticated()"
@@ -164,7 +172,7 @@
         </ul>
     </div>
     <!-- 답변 페이징처리 끝 -->
-    <form th:action="@{/question/{code}/detail/{number}(code=${question.category.code}, number=${questionNumber})}" method="get" id="answerSearchForm">
+    <form th:action="@{/question/{code}/detail/{number}(code=${questionCategoryCode}, number=${questionNumber})}" method="get" id="answerSearchForm">
         <input type="hidden" id="answerPage" name="answerPage" th:value="${answerPaging.number + 1}">
         <input type="hidden" id="answerSort" name="answerSort" th:value="${answerSort}">
     </form>

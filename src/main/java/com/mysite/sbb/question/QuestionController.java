@@ -65,6 +65,7 @@ public class QuestionController {
     }
 
     private void addQuestionDetailAttributes(Model model, Question question, int answerPage, String answerSort) {
+        answerSort = AnswerService.normalizeSort(answerSort);
         Page<Answer> answerPaging = this.answerService.getList(question, toZeroBasedPage(answerPage), answerSort);
         Map<Integer, String> answerContentMap = answerPaging.getContent().stream()
                 .collect(Collectors.toMap(Answer::getId, answer -> this.commonUtil.markdown(answer.getContent())));
@@ -75,14 +76,19 @@ public class QuestionController {
         model.addAttribute("answerContentMap", answerContentMap);
         model.addAttribute("answerSort", answerSort);
         model.addAttribute("questionNumber", this.questionService.getCategoryQuestionNumber(question));
+        model.addAttribute("questionCategoryCode", getCategoryCode(question));
     }
 
     private String getDetailUrl(Question question) {
+        long questionNumber = this.questionService.getCategoryQuestionNumber(question);
+        return String.format("/question/%s/detail/%s", getCategoryCode(question), questionNumber);
+    }
+
+    private String getCategoryCode(Question question) {
         String categoryCode = question.getCategory() != null
                 ? question.getCategory().getCode()
                 : CategoryService.DEFAULT_CATEGORY_CODE;
-        long questionNumber = this.questionService.getCategoryQuestionNumber(question);
-        return String.format("/question/%s/detail/%s", categoryCode, questionNumber);
+        return categoryCode;
     }
 
     @PreAuthorize("isAuthenticated()") //로그인 필요
@@ -112,12 +118,16 @@ public class QuestionController {
         return String.format("redirect:/question/%s/list", category.getCode()); // 질문 저장 후 질문목록으로 리다이렉트
     }
 
+    private boolean isOwner(SiteUser author, Principal principal) {
+        return author != null && principal != null && author.getUsername().equals(principal.getName());
+    }
+
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/modify/{id}")
     public String questionModify(QuestionForm questionForm, @PathVariable("id") Integer id,
                                  Principal principal, Model model) {
         Question question = this.questionService.getQuestion(id);
-        if (!question.getAuthor().getUsername().equals(principal.getName())) {
+        if (!isOwner(question.getAuthor(), principal)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "수정권한이 없습니다.");
         }
         questionForm.setSubject(question.getSubject());
@@ -140,7 +150,7 @@ public class QuestionController {
             return "question/form";
         }
         Question question = this.questionService.getQuestion(id);
-        if (!question.getAuthor().getUsername().equals(principal.getName())) {
+        if (!isOwner(question.getAuthor(), principal)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "수정권한이 없습니다.");
         }
         Category category = this.categoryService.getCategoryOrDefault(questionForm.getCategoryCode());
@@ -149,10 +159,10 @@ public class QuestionController {
     }
 
     @PreAuthorize("isAuthenticated()")
-    @GetMapping("/delete/{id}")
+    @PostMapping("/delete/{id}")
     public String questionDelete(Principal principal, @PathVariable("id") Integer id) {
         Question question = this.questionService.getQuestion(id);
-        if (!question.getAuthor().getUsername().equals(principal.getName())) {
+        if (!isOwner(question.getAuthor(), principal)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "삭제권한이 없습니다.");
         }
         String categoryCode = question.getCategory() != null
@@ -163,7 +173,7 @@ public class QuestionController {
     }
 
     @PreAuthorize("isAuthenticated()")
-    @GetMapping("/vote/{id}")
+    @PostMapping("/vote/{id}")
     public String questionVote(Principal principal, @PathVariable("id") Integer id) {
         Question question = this.questionService.getQuestion(id);
         SiteUser siteUser = this.userService.getUser(principal.getName()); //로그인 ID를 DB와 매핑 가능한 SiteUser로 승격

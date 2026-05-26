@@ -21,7 +21,37 @@ class MarkdownEditorTest extends AbstractSbbIntegrationTest {
 				.andExpect(status().isOk())
 				.andExpect(content().string(containsString("toastui.Editor")))
 				.andExpect(content().string(containsString("textarea.markdown-editor:not([disabled])")))
-				.andExpect(content().string(containsString("editor.getMarkdown()")));
+				.andExpect(content().string(containsString("editor.getMarkdown()")))
+				.andExpect(content().string(containsString("data-bs-theme")))
+				.andExpect(content().string(containsString("toastui-editor-dark")))
+				.andExpect(content().string(containsString("sbb:themechange")));
+	}
+
+	@Test
+	void customStyleSupportsDarkMarkdownContentText() throws Exception {
+		mockMvc.perform(get("/css/style.css"))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("[data-bs-theme=\"dark\"] .markdown-content")))
+				.andExpect(content().string(containsString("color: var(--bs-body-color)")))
+				.andExpect(content().string(containsString(".toastui-editor-contents *")))
+				.andExpect(content().string(containsString(".ProseMirror")))
+				.andExpect(content().string(containsString(".toastui-editor-md-heading")))
+				.andExpect(content().string(containsString(".toastui-editor-mode-switch")))
+				.andExpect(content().string(containsString("filter: invert(1) brightness(1.85) contrast(0.9)")))
+				.andExpect(content().string(containsString(".toastui-editor-popup-add-heading")))
+				.andExpect(content().string(containsString(".toastui-editor-popup-add-image")))
+				.andExpect(content().string(containsString(".toastui-editor-popup-add-link")))
+				.andExpect(content().string(containsString(".toastui-editor-md-preview-highlight")))
+				.andExpect(content().string(containsString("background-color: transparent !important")))
+				.andExpect(content().string(containsString("box-shadow: none")))
+				.andExpect(content().string(containsString("width: 1px")))
+				.andExpect(content().string(containsString(".toastui-editor-md-preview-highlight::after")))
+				.andExpect(content().string(containsString("content: none !important")))
+				.andExpect(content().string(containsString("display: none !important")))
+				.andExpect(content().string(containsString(".toastui-editor-md-vertical-style .toastui-editor-md-splitter")))
+				.andExpect(content().string(containsString("background-color: #6c757d")))
+				.andExpect(content().string(containsString("background-color: #f8f9fa")))
+				.andExpect(content().string(containsString(".ProseMirror table")));
 	}
 
 	@Test
@@ -87,6 +117,7 @@ class MarkdownEditorTest extends AbstractSbbIntegrationTest {
 				.with(user(TEST_USERNAME)))
 				.andExpect(status().isOk())
 				.andExpect(view().name("question/detail"))
+				.andExpect(content().string(containsString("card-text markdown-content")))
 				.andExpect(content().string(containsString("/vendor/toastui-editor/3.2.2/toastui-editor.min.css")))
 				.andExpect(content().string(containsString("/vendor/toastui-editor/3.2.2/toastui-editor-all.min.js")))
 				.andExpect(content().string(containsString("/js/markdown-editor.js")))

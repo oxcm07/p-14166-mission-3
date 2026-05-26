@@ -4,6 +4,21 @@
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <script>
+        (function() {
+            var theme;
+            try {
+                theme = localStorage.getItem("theme") || "auto";
+            } catch (e) {
+                theme = "auto";
+            }
+
+            var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+            var resolvedTheme = theme === "dark" || (theme === "auto" && prefersDark) ? "dark" : "light";
+            document.documentElement.setAttribute("data-bs-theme", resolvedTheme);
+            document.documentElement.setAttribute("data-theme-preference", theme);
+        })();
+    </script>
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" type="text/css" th:href="@{/css/bootstrap.min.css}">
     <!-- sbb CSS -->
@@ -14,11 +29,18 @@
 <body>
 <!-- 네비게이션바 -->
 <nav th:replace="~{layout/navbar :: navbarFragment}"></nav>
+<button class="btn btn-sm btn-outline-secondary theme-toggle theme-toggle-floating" type="button"
+        id="themeToggle" aria-label="테마 자동" title="테마 자동">
+    <span id="themeToggleAuto" class="theme-toggle-auto" aria-hidden="true">A</span>
+    <img id="themeToggleSun" class="theme-toggle-icon d-none" th:src="@{/images/icons/theme-sun.svg}" alt="" aria-hidden="true">
+    <img id="themeToggleMoon" class="theme-toggle-icon d-none" th:src="@{/images/icons/theme-moon.svg}" alt="" aria-hidden="true">
+</button>
 <!-- 기본 템플릿 안에 삽입될 내용 Start -->
 <th:block layout:fragment="content"></th:block>
 <!-- 기본 템플릿 안에 삽입될 내용 End -->
 <!-- Bootstrap JS -->
 <script th:src="@{/js/bootstrap.min.js}"></script>
+<script th:src="@{/js/theme.js}"></script>
 <!-- 자바스크립트 Start -->
 <th:block layout:fragment="script"></th:block>
 <!-- 자바스크립트 End -->

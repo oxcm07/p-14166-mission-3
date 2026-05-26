@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.security.Principal;
 import java.util.HashMap;
@@ -75,8 +76,7 @@ public class CommentController {
         }
         SiteUser siteUser = this.userService.getUser(principal.getName());
         Comment comment = this.commentService.create(question, commentForm.getContent(), siteUser);
-        return String.format("redirect:%s?answerPage=%s&answerSort=%s#comment_%s",
-                getQuestionDetailUrl(question), answerPage, answerSort, comment.getId());
+        return redirectToQuestionDetail(question, answerPage, answerSort, "comment_" + comment.getId());
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -88,6 +88,13 @@ public class CommentController {
                                       @RequestParam(value = "answerSort", defaultValue = "latest") String answerSort) {
         Answer answer = this.answerService.getAnswer(id);
         Question question = answer.getQuestion();
+        if (question == null) {
+            if (!bindingResult.hasErrors()) {
+                SiteUser siteUser = this.userService.getUser(principal.getName());
+                this.commentService.create(answer, commentForm.getContent(), siteUser);
+            }
+            return "redirect:/answer/list";
+        }
         if (bindingResult.hasErrors()) {
             model.addAttribute("answerForm", new AnswerForm());
             addQuestionDetailAttributes(model, question, answerPage, answerSort);
@@ -95,11 +102,11 @@ public class CommentController {
         }
         SiteUser siteUser = this.userService.getUser(principal.getName());
         Comment comment = this.commentService.create(answer, commentForm.getContent(), siteUser);
-        return String.format("redirect:%s?answerPage=%s&answerSort=%s#comment_%s",
-                getQuestionDetailUrl(question), answerPage, answerSort, comment.getId());
+        return redirectToQuestionDetail(question, answerPage, answerSort, "comment_" + comment.getId());
     }
 
     private void addQuestionDetailAttributes(Model model, Question question, int answerPage, String answerSort) {
+        answerSort = AnswerService.normalizeSort(answerSort);
         Page<Answer> answerPaging = this.answerService.getList(question, toZeroBasedPage(answerPage), answerSort);
         Map<Integer, String> answerContentMap = answerPaging.getContent().stream()
                 .collect(Collectors.toMap(Answer::getId, answer -> this.commonUtil.markdown(answer.getContent())));
@@ -110,6 +117,7 @@ public class CommentController {
         model.addAttribute("answerContentMap", answerContentMap);
         model.addAttribute("answerSort", answerSort);
         model.addAttribute("questionNumber", this.questionService.getCategoryQuestionNumber(question));
+        model.addAttribute("questionCategoryCode", getCategoryCode(question));
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -119,12 +127,12 @@ public class CommentController {
                                 @RequestParam(value = "answerPage", defaultValue = "1") int answerPage,
                                 @RequestParam(value = "answerSort", defaultValue = "latest") String answerSort) {
         Comment comment = this.commentService.getComment(id);
-        if (!comment.getAuthor().getUsername().equals(principal.getName())) {
+        if (!isOwner(comment.getAuthor(), principal)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "수정권한이 없습니다.");
         }
         commentForm.setContent(comment.getContent());
-        model.addAttribute("answerPage", answerPage);
-        model.addAttribute("answerSort", answerSort);
+        model.addAttribute("answerPage", toOneBasedPage(answerPage));
+        model.addAttribute("answerSort", AnswerService.normalizeSort(answerSort));
         return "comment/form";
     }
 
@@ -135,39 +143,37 @@ public class CommentController {
                                 @RequestParam(value = "answerPage", defaultValue = "1") int answerPage,
                                 @RequestParam(value = "answerSort", defaultValue = "latest") String answerSort) {
         if (bindingResult.hasErrors()) {
-            model.addAttribute("answerPage", answerPage);
-            model.addAttribute("answerSort", answerSort);
+            model.addAttribute("answerPage", toOneBasedPage(answerPage));
+            model.addAttribute("answerSort", AnswerService.normalizeSort(answerSort));
             return "comment/form";
         }
         Comment comment = this.commentService.getComment(id);
-        if (!comment.getAuthor().getUsername().equals(principal.getName())) {
+        if (!isOwner(comment.getAuthor(), principal)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "수정권한이 없습니다.");
         }
+        Question targetQuestion = getCommentTargetQuestion(comment);
         this.commentService.modify(comment, commentForm.getContent());
-        return String.format("redirect:%s?answerPage=%s&answerSort=%s#comment_%s",
-                getQuestionDetailUrl(comment), answerPage, answerSort, comment.getId());
+        if (targetQuestion == null) {
+            return "redirect:/comment/list";
+        }
+        return redirectToQuestionDetail(targetQuestion, answerPage, answerSort, "comment_" + comment.getId());
     }
 
     @PreAuthorize("isAuthenticated()")
-    @GetMapping("/delete/{id}")
+    @PostMapping("/delete/{id}")
     public String commentDelete(Principal principal, @PathVariable("id") Integer id,
                                 @RequestParam(value = "answerPage", defaultValue = "1") int answerPage,
                                 @RequestParam(value = "answerSort", defaultValue = "latest") String answerSort) {
         Comment comment = this.commentService.getComment(id);
-        if (!comment.getAuthor().getUsername().equals(principal.getName())) {
+        if (!isOwner(comment.getAuthor(), principal)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "삭제권한이 없습니다.");
         }
-        String questionDetailUrl = getQuestionDetailUrl(comment);
+        Question targetQuestion = getCommentTargetQuestion(comment);
         this.commentService.delete(comment);
-        return String.format("redirect:%s?answerPage=%s&answerSort=%s",
-                questionDetailUrl, answerPage, answerSort);
-    }
-
-    private String getQuestionDetailUrl(Comment comment) {
-        if (comment.getQuestion() != null) {
-            return getQuestionDetailUrl(comment.getQuestion());
+        if (targetQuestion == null) {
+            return "redirect:/comment/list";
         }
-        return getQuestionDetailUrl(comment.getAnswer().getQuestion());
+        return redirectToQuestionDetail(targetQuestion, answerPage, answerSort, null);
     }
 
     private String getQuestionDetailUrl(Question question) {
@@ -198,13 +204,36 @@ public class CommentController {
         if (comment.getQuestion() != null) {
             return comment.getQuestion();
         }
-        if (comment.getAnswer() != null) {
-            return comment.getAnswer().getQuestion();
+        Answer answer = comment.getAnswer();
+        if (answer != null) {
+            return answer.getQuestion();
         }
         return null;
     }
 
     private int toZeroBasedPage(int page) {
         return Math.max(page, 1) - 1;
+    }
+
+    private int toOneBasedPage(int page) {
+        return Math.max(page, 1);
+    }
+
+    private String redirectToQuestionDetail(Question question, int answerPage, String answerSort, String fragment) {
+        return redirectToQuestionDetail(getQuestionDetailUrl(question), answerPage, answerSort, fragment);
+    }
+
+    private String redirectToQuestionDetail(String questionDetailUrl, int answerPage, String answerSort, String fragment) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(questionDetailUrl)
+                .queryParam("answerPage", toOneBasedPage(answerPage))
+                .queryParam("answerSort", AnswerService.normalizeSort(answerSort));
+        if (fragment != null) {
+            builder.fragment(fragment);
+        }
+        return "redirect:" + builder.build().encode().toUriString();
+    }
+
+    private boolean isOwner(SiteUser author, Principal principal) {
+        return author != null && principal != null && author.getUsername().equals(principal.getName());
     }
 }

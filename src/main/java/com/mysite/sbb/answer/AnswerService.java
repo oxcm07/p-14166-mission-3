@@ -14,13 +14,18 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @RequiredArgsConstructor
 @Service
 public class AnswerService {
+    private static final String DEFAULT_SORT = "latest";
+    private static final Set<String> ALLOWED_SORTS = Set.of(DEFAULT_SORT, "old", "recommend");
+
     private final AnswerRepository answerRepository;
 
     public Page<Answer> getList(Question question, int page, String sort) {
+        sort = normalizeSort(sort);
         if ("recommend".equals(sort)) {
             Pageable pageable = PageRequest.of(page, 5);
             return this.answerRepository.findAllByQuestionOrderByVoterCount(question, pageable);
@@ -81,5 +86,12 @@ public class AnswerService {
     public void vote(Answer answer, SiteUser siteUser){
         answer.getVoter().add(siteUser);
         this.answerRepository.save(answer);
+    }
+
+    public static String normalizeSort(String sort) {
+        if (sort == null || !ALLOWED_SORTS.contains(sort)) {
+            return DEFAULT_SORT;
+        }
+        return sort;
     }
 }

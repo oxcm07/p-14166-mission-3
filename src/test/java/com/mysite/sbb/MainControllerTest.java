@@ -33,8 +33,22 @@ class MainControllerTest extends AbstractSbbIntegrationTest {
 				.andExpect(status().isOk());
 		mockMvc.perform(get("/css/style.css"))
 				.andExpect(status().isOk());
+		mockMvc.perform(get("/images/icons/theme-sun.svg"))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("<svg")));
+		mockMvc.perform(get("/images/icons/theme-moon.svg"))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("<svg")));
 		mockMvc.perform(get("/js/bootstrap.min.js"))
 				.andExpect(status().isOk());
+		mockMvc.perform(get("/js/theme.js"))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("prefers-color-scheme: dark")))
+				.andExpect(content().string(containsString("data-bs-theme")))
+				.andExpect(content().string(containsString("sbb:themechange")))
+				.andExpect(content().string(containsString("nextPreference")))
+				.andExpect(content().string(containsString("themeToggleSun")))
+				.andExpect(content().string(containsString("themeToggleMoon")));
 		mockMvc.perform(get("/js/question/list.js"))
 				.andExpect(status().isOk())
 				.andExpect(content().string(containsString("searchForm")));
@@ -61,9 +75,31 @@ class MainControllerTest extends AbstractSbbIntegrationTest {
 				.andExpect(content().string(containsString("/css/bootstrap.min.css")))
 				.andExpect(content().string(containsString("/css/style.css")))
 				.andExpect(content().string(containsString("/js/bootstrap.min.js")))
+				.andExpect(content().string(containsString("/js/theme.js")))
 				.andExpect(content().string(not(containsString("href=\"/bootstrap.min.css\""))))
 				.andExpect(content().string(not(containsString("src=\"/bootstrap.min.js\""))))
 				.andExpect(content().string(not(containsString("href=\"/style.css\""))));
+	}
+
+	@Test
+	void layoutIncludesColorModeBootstrapAttributesAndControls() throws Exception {
+		mockMvc.perform(get("/user/login"))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("localStorage.getItem(\"theme\")")))
+				.andExpect(content().string(containsString("prefers-color-scheme: dark")))
+				.andExpect(content().string(containsString("document.documentElement.setAttribute(\"data-bs-theme\"")))
+				.andExpect(content().string(containsString("id=\"themeToggle\"")))
+				.andExpect(content().string(containsString("id=\"themeToggleAuto\"")))
+				.andExpect(content().string(containsString("id=\"themeToggleSun\"")))
+				.andExpect(content().string(containsString("id=\"themeToggleMoon\"")))
+				.andExpect(content().string(containsString("/images/icons/theme-sun.svg")))
+				.andExpect(content().string(containsString("/images/icons/theme-moon.svg")))
+				.andExpect(content().string(containsString("theme-toggle-floating")))
+				.andExpect(content().string(containsString(">A</span>")))
+				.andExpect(content().string(containsString("bg-body-tertiary")))
+				.andExpect(content().string(not(containsString("themeDropdown"))))
+				.andExpect(content().string(not(containsString("theme-option"))))
+				.andExpect(content().string(not(containsString("navbar-light bg-light"))));
 	}
 
 	@Test

@@ -40,6 +40,19 @@ class CommonUtilTest {
 	}
 
 	@Test
+	void markdownSupportsGfmTables() {
+		String html = commonUtil.markdown("""
+				| 이름 | 값 |
+				| --- | --- |
+				| 표 | 동작 |
+				""");
+
+		assertThat(html).contains("<table>");
+		assertThat(html).contains("<th>이름</th>");
+		assertThat(html).contains("<td>동작</td>");
+	}
+
+	@Test
 	void markdownRemovesUnsafeLinkProtocols() {
 		String html = commonUtil.markdown("""
 				[script](javascript:alert('xss'))

@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.security.Principal;
 import java.util.HashMap;
@@ -63,12 +64,11 @@ public class AnswerController {
             return "question/detail";
         }
         Answer answer = this.answerService.create(question, answerForm.getContent(), siteUser);
-        // 답변 등록 후 앵커로 스크롤을 이동시키기 위해 #answer_%s 추가
-        return String.format("redirect:%s?answerPage=%s&answerSort=%s#answer_%s",
-                getQuestionDetailUrl(answer.getQuestion()), answerPage, answerSort, answer.getId());
+        return redirectToQuestionDetail(answer.getQuestion(), answerPage, answerSort, "answer_" + answer.getId());
     }
     // 컨트롤러에서 마크다운을 HTML로 변환해서 모델에 담아 넘기는 방식
     private void addQuestionDetailAttributes(Model model, Question question, int answerPage, String answerSort) {
+        answerSort = AnswerService.normalizeSort(answerSort);
         Page<Answer> answerPaging = this.answerService.getList(question, toZeroBasedPage(answerPage), answerSort);
         Map<Integer, String> answerContentMap = answerPaging.getContent().stream()
                 .collect(Collectors.toMap(Answer::getId, answer -> this.commonUtil.markdown(answer.getContent())));
@@ -79,6 +79,7 @@ public class AnswerController {
         model.addAttribute("answerContentMap", answerContentMap);
         model.addAttribute("answerSort", answerSort);
         model.addAttribute("questionNumber", this.questionService.getCategoryQuestionNumber(question));
+        model.addAttribute("questionCategoryCode", getCategoryCode(question));
         if (!model.containsAttribute("commentForm")) {
             model.addAttribute("commentForm", new CommentForm());
         }
@@ -91,12 +92,12 @@ public class AnswerController {
                                @RequestParam(value = "answerPage", defaultValue = "1") int answerPage,
                                @RequestParam(value = "answerSort", defaultValue = "latest") String answerSort) {
         Answer answer = this.answerService.getAnswer(id);
-        if (!answer.getAuthor().getUsername().equals(principal.getName())) {
+        if (!isOwner(answer.getAuthor(), principal)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "수정권한이 없습니다.");
         }
         answerForm.setContent(answer.getContent());
-        model.addAttribute("answerPage", answerPage);
-        model.addAttribute("answerSort", answerSort);
+        model.addAttribute("answerPage", toOneBasedPage(answerPage));
+        model.addAttribute("answerSort", AnswerService.normalizeSort(answerSort));
         return "answer/form";
     }
 
@@ -107,43 +108,50 @@ public class AnswerController {
                                @RequestParam(value = "answerPage", defaultValue = "1") int answerPage,
                                @RequestParam(value = "answerSort", defaultValue = "latest") String answerSort) {
         if (bindingResult.hasErrors()) {
-            model.addAttribute("answerPage", answerPage);
-            model.addAttribute("answerSort", answerSort);
+            model.addAttribute("answerPage", toOneBasedPage(answerPage));
+            model.addAttribute("answerSort", AnswerService.normalizeSort(answerSort));
             return "answer/form";
         }
         Answer answer = this.answerService.getAnswer(id);
-        if (!answer.getAuthor().getUsername().equals(principal.getName())) {
+        if (!isOwner(answer.getAuthor(), principal)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "수정권한이 없습니다.");
         }
         this.answerService.modify(answer, answerForm.getContent());
-        return String.format("redirect:%s?answerPage=%s&answerSort=%s#answer_%s",
-                getQuestionDetailUrl(answer.getQuestion()), answerPage, answerSort, answer.getId());
+        if (answer.getQuestion() == null) {
+            return "redirect:/answer/list";
+        }
+        return redirectToQuestionDetail(answer.getQuestion(), answerPage, answerSort, "answer_" + answer.getId());
     }
 
     @PreAuthorize("isAuthenticated()")
-    @GetMapping("/delete/{id}")
+    @PostMapping("/delete/{id}")
     public String answerDelete(Principal principal, @PathVariable("id") Integer id,
                                @RequestParam(value = "answerPage", defaultValue = "1") int answerPage,
                                @RequestParam(value = "answerSort", defaultValue = "latest") String answerSort){
         Answer answer = this.answerService.getAnswer(id);
-        if(!answer.getAuthor().getUsername().equals(principal.getName())){
+        if (!isOwner(answer.getAuthor(), principal)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "삭제권한이 없습니다.");
         }
+        Question question = answer.getQuestion();
         this.answerService.delete(answer);
-        return String.format("redirect:%s?answerPage=%s&answerSort=%s",
-                getQuestionDetailUrl(answer.getQuestion()), answerPage, answerSort);
+        if (question == null) {
+            return "redirect:/answer/list";
+        }
+        return redirectToQuestionDetail(question, answerPage, answerSort, null);
     }
 
     @PreAuthorize("isAuthenticated()")
-    @GetMapping("/vote/{id}")
+    @PostMapping("/vote/{id}")
     public String answerVote(Principal principal, @PathVariable("id") Integer id,
                              @RequestParam(value = "answerPage", defaultValue = "1") int answerPage,
                              @RequestParam(value = "answerSort", defaultValue = "latest") String answerSort){
         Answer answer = this.answerService.getAnswer(id);
         SiteUser siteUser = this.userService.getUser(principal.getName());
         this.answerService.vote(answer, siteUser);
-        return String.format("redirect:%s?answerPage=%s&answerSort=%s#answer_%s",
-                getQuestionDetailUrl(answer.getQuestion()), answerPage, answerSort, answer.getId());
+        if (answer.getQuestion() == null) {
+            return "redirect:/answer/list";
+        }
+        return redirectToQuestionDetail(answer.getQuestion(), answerPage, answerSort, "answer_" + answer.getId());
     }
 
     private String getQuestionDetailUrl(Question question) {
@@ -172,5 +180,23 @@ public class AnswerController {
 
     private int toZeroBasedPage(int page) {
         return Math.max(page, 1) - 1;
+    }
+
+    private int toOneBasedPage(int page) {
+        return Math.max(page, 1);
+    }
+
+    private String redirectToQuestionDetail(Question question, int answerPage, String answerSort, String fragment) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(getQuestionDetailUrl(question))
+                .queryParam("answerPage", toOneBasedPage(answerPage))
+                .queryParam("answerSort", AnswerService.normalizeSort(answerSort));
+        if (fragment != null) {
+            builder.fragment(fragment);
+        }
+        return "redirect:" + builder.build().encode().toUriString();
+    }
+
+    private boolean isOwner(SiteUser author, Principal principal) {
+        return author != null && principal != null && author.getUsername().equals(principal.getName());
     }
 }

@@ -39,7 +39,7 @@ public class SecurityConfig {
                         .userInfoEndpoint((userInfoEndpoint) -> userInfoEndpoint
                                 .userService(kakaoOAuth2UserService)))
                 .logout((logout) -> logout
-                        .logoutRequestMatcher(pathMatcher.matcher("/user/logout")) //Spring Security 7 권장 경로 매칭
+                        .logoutUrl("/user/logout")
                         .logoutSuccessUrl("/")
                         .invalidateHttpSession(true));
         return http.build();

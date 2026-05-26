@@ -19,7 +19,7 @@
             <p class="mb-1 text-truncate" th:text="${comment.content}"></p>
             <div class="d-flex gap-2 small text-muted">
                 <span th:if="${comment.author != null}" th:text="${comment.author.username}"></span>
-                <span th:text="${comment.question != null ? '질문 댓글' : '답변 댓글'}"></span>
+                <span th:text="${comment.question != null ? '질문 댓글' : (comment.answer != null ? '답변 댓글' : '연결 없음')}"></span>
             </div>
         </a>
     </div>

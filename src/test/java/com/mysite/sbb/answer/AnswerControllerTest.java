@@ -5,6 +5,8 @@ import com.mysite.sbb.question.Question;
 import com.mysite.sbb.user.SiteUser;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDateTime;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -39,6 +41,22 @@ class AnswerControllerTest extends AbstractSbbIntegrationTest {
 	}
 
 	@Test
+	void answerCreateNormalizesInvalidAnswerSortInRedirect() throws Exception {
+		SiteUser author = createUser();
+		Question question = createQuestion("답변 정렬 질문", "질문 내용", category("qna"), author, 0);
+
+		mockMvc.perform(post("/answer/create/{id}", question.getId())
+						.param("content", "답변 테스트 내용")
+						.param("answerPage", "-1")
+						.param("answerSort", "latest&next=/external")
+						.with(user(TEST_USERNAME))
+						.with(csrf()))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(header().string("Location",
+						containsString("/question/qna/detail/1?answerPage=1&answerSort=latest#answer_")));
+	}
+
+	@Test
 	void recentAnswerListShowsNewestAnswersFirst() throws Exception {
 		SiteUser author = createUser();
 		Question question = createQuestion("최근 답변 대상 질문", "질문 내용", category("qna"), author, 0);
@@ -60,6 +78,23 @@ class AnswerControllerTest extends AbstractSbbIntegrationTest {
 	}
 
 	@Test
+	void recentAnswerListHandlesAnswerWithoutQuestion() throws Exception {
+		SiteUser author = createUser();
+		Answer answer = new Answer();
+		answer.setContent("질문 없는 답변");
+		answer.setAuthor(author);
+		answer.setCreateDate(LocalDateTime.of(2026, 1, 1, 0, 0));
+		answerRepository.save(answer);
+
+		mockMvc.perform(get("/answer/list"))
+				.andExpect(status().isOk())
+				.andExpect(view().name("answer/list"))
+				.andExpect(content().string(containsString("연결된 글이 없습니다.")))
+				.andExpect(content().string(containsString("질문 없는 답변")))
+				.andExpect(content().string(containsString("href=\"#\"")));
+	}
+
+	@Test
 	void answerModifyFormKeepsPagingParameters() throws Exception {
 		SiteUser author = createUser();
 		Question question = createQuestion("수정 폼 질문", "질문 내용", category("qna"), author, 0);
@@ -74,5 +109,99 @@ class AnswerControllerTest extends AbstractSbbIntegrationTest {
 				.andExpect(model().attribute("answerPage", 2))
 				.andExpect(model().attribute("answerSort", "old"))
 				.andExpect(content().string(containsString("수정 폼 답변")));
+	}
+
+	@Test
+	void answerModifyAndDeleteWithMissingAuthorReturnBadRequest() throws Exception {
+		SiteUser author = createUser();
+		Question question = createQuestion("작성자 없는 답변 질문", "질문 내용", category("qna"), author, 0);
+		Answer answer = createAnswer(question, "작성자 없는 답변", null, 1);
+
+		mockMvc.perform(get("/answer/modify/{id}", answer.getId()).with(user(TEST_USERNAME)))
+				.andExpect(status().isBadRequest());
+
+		mockMvc.perform(post("/answer/modify/{id}", answer.getId())
+						.param("content", "수정 답변")
+						.with(user(TEST_USERNAME))
+						.with(csrf()))
+				.andExpect(status().isBadRequest());
+
+		mockMvc.perform(post("/answer/delete/{id}", answer.getId())
+						.with(user(TEST_USERNAME))
+						.with(csrf()))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void orphanAnswerModifyVoteAndDeleteRedirectToAnswerList() throws Exception {
+		SiteUser author = createUser();
+		Answer answer = createAnswer(null, "질문 없는 수정 답변", author, 0);
+		Answer voteAnswer = createAnswer(null, "질문 없는 추천 답변", author, 1);
+
+		mockMvc.perform(post("/answer/modify/{id}", answer.getId())
+						.param("content", "수정된 질문 없는 답변")
+						.with(user(TEST_USERNAME))
+						.with(csrf()))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(header().string("Location", "/answer/list"));
+
+		assertThat(answerRepository.findById(answer.getId()).orElseThrow().getContent())
+				.isEqualTo("수정된 질문 없는 답변");
+
+		mockMvc.perform(post("/answer/vote/{id}", voteAnswer.getId())
+						.with(user(TEST_USERNAME))
+						.with(csrf()))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(header().string("Location", "/answer/list"));
+
+		assertThat(answerRepository.findById(voteAnswer.getId()).orElseThrow().getVoter()).hasSize(1);
+
+		mockMvc.perform(post("/answer/delete/{id}", answer.getId())
+						.with(user(TEST_USERNAME))
+						.with(csrf()))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(header().string("Location", "/answer/list"));
+
+		assertThat(answerRepository.findById(answer.getId())).isEmpty();
+	}
+
+	@Test
+	void answerVoteRequiresPost() throws Exception {
+		SiteUser author = createUser();
+		Question question = createQuestion("답변 추천 질문", "질문 내용", category("qna"), author, 0);
+		Answer answer = answerService.create(question, "추천 답변", author);
+
+		mockMvc.perform(get("/answer/vote/{id}", answer.getId()).with(user(TEST_USERNAME)))
+				.andExpect(status().isMethodNotAllowed());
+
+		mockMvc.perform(post("/answer/vote/{id}", answer.getId())
+						.param("answerPage", "2")
+						.param("answerSort", "bad")
+						.with(user(TEST_USERNAME))
+						.with(csrf()))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(header().string("Location",
+						"/question/qna/detail/1?answerPage=2&answerSort=latest#answer_" + answer.getId()));
+
+		assertThat(answerRepository.findById(answer.getId()).orElseThrow().getVoter()).hasSize(1);
+	}
+
+	@Test
+	void answerDeleteRequiresPost() throws Exception {
+		SiteUser author = createUser();
+		Question question = createQuestion("답변 삭제 질문", "질문 내용", category("qna"), author, 0);
+		Answer answer = answerService.create(question, "삭제 답변", author);
+
+		mockMvc.perform(get("/answer/delete/{id}", answer.getId()).with(user(TEST_USERNAME)))
+				.andExpect(status().isMethodNotAllowed());
+
+		mockMvc.perform(post("/answer/delete/{id}", answer.getId())
+						.param("answerSort", "bad")
+						.with(user(TEST_USERNAME))
+						.with(csrf()))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(header().string("Location", "/question/qna/detail/1?answerPage=1&answerSort=latest"));
+
+		assertThat(answerRepository.findById(answer.getId())).isEmpty();
 	}
 }
