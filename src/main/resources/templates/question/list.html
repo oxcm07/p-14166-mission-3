@@ -21,22 +21,22 @@
         </thead>
         <tbody>
         <tr class="text-center" th:each="question, loop : ${paging}">
-            <td th:text="${questionNumberMap[question.id]}"></td>
+            <td th:text="${question.number}"></td>
             <td class="text-start">
                 <div>
-                    <a th:href="@{/question/{code}/detail/{number}(code=${category.code}, number=${questionNumberMap[question.id]})}"
+                    <a th:href="@{/question/{code}/detail/{number}(code=${category.code}, number=${question.number})}"
                        th:text="${question.subject}"></a>
                 </div>
                 <div class="text-muted mt-1" style="font-size: 0.8rem;">
-                    <span th:text="|답변 : ${#lists.size(question.answerList)}|"></span>
+                    <span th:text="|답변 : ${question.answerCount}|"></span>
                     <span class="mx-1">|</span>
-                    <span th:text="|댓글 : ${#lists.size(question.commentList)}|"></span>
+                    <span th:text="|댓글 : ${question.commentCount}|"></span>
                 </div>
             </td>
-            <td><span th:if="${question.author != null}" th:text="${question.author.username}"></span></td>
+            <td><span th:if="${question.authorName != null}" th:text="${question.authorName}"></span></td>
             <td th:text="${#temporals.format(question.createDate, 'yyyy-MM-dd HH:mm')}"></td>
-            <td th:text="${question.viewCount ?: 0}"></td>
-            <td th:text="${#lists.size(question.voter)}"></td>
+            <td th:text="${question.viewCount}"></td>
+            <td th:text="${question.voteCount}"></td>
         </tr>
         </tbody>
     </table>

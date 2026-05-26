@@ -53,6 +53,25 @@ public class QuestionService {
         return this.questionRepository.findAll(spec, pageable);
     }
 
+    public Page<QuestionListDto> getListDto(int page, String kw, Category category) {
+        return getList(page, kw, category).map(this::toListDto);
+    }
+
+    private QuestionListDto toListDto(Question question) {
+        String authorName = question.getAuthor() != null ? question.getAuthor().getUsername() : null;
+        Integer viewCount = question.getViewCount();
+        return new QuestionListDto(
+                getCategoryQuestionNumber(question),
+                question.getSubject(),
+                authorName,
+                question.getCreateDate(),
+                question.getAnswerList().size(),
+                question.getCommentList().size(),
+                viewCount == null ? 0 : viewCount,
+                question.getVoter().size()
+        );
+    }
+
     public Page<Question> getListByAuthor(SiteUser author, int page) {
         Pageable pageable = PageRequest.of(page, 5);
         return this.questionRepository.findAllByAuthorOrderByCreateDateDesc(author, pageable);

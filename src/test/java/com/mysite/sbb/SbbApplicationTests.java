@@ -157,7 +157,7 @@ class SbbApplicationTests {
 		mockMvc.perform(get("/question/qna/list"))
 				.andExpect(status().isOk())
 				.andExpect(view().name("question/list"))
-				.andExpect(model().attributeExists("paging", "categoryList", "category", "questionNumberMap"))
+				.andExpect(model().attributeExists("paging", "categoryList", "category"))
 				.andExpect(content().string(containsString("질문답변")))
 				.andExpect(content().string(containsString("강좌")))
 				.andExpect(content().string(containsString("qna 제목")))

@@ -39,14 +39,11 @@ public class QuestionController {
                        @RequestParam(value = "kw", defaultValue = "") String kw,
                        @PathVariable("categoryCode") String categoryCode) {
         Category category = this.categoryService.getCategory(categoryCode);
-        Page<Question> paging = this.questionService.getList(toZeroBasedPage(page), kw, category);
-        Map<Integer, Long> questionNumberMap = paging.getContent().stream()
-                .collect(Collectors.toMap(Question::getId, this.questionService::getCategoryQuestionNumber));
+        Page<QuestionListDto> paging = this.questionService.getListDto(toZeroBasedPage(page), kw, category);
         model.addAttribute("paging", paging);
         model.addAttribute("kw", kw);
         model.addAttribute("categoryList", this.categoryService.getList());
         model.addAttribute("category", category);
-        model.addAttribute("questionNumberMap", questionNumberMap);
         return "question/list";
     }
 
