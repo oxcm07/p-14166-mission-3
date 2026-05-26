@@ -102,6 +102,29 @@ class QuestionControllerTest extends AbstractSbbIntegrationTest {
 	}
 
 	@Test
+	void questionDetailRendersSanitizedMarkdownContent() throws Exception {
+		SiteUser author = createUser();
+		createQuestion("XSS 질문", """
+				<script>alert('xss')</script>
+				<img src=x onerror=alert('xss')>
+				[click](javascript:alert('xss'))
+				![image](data:text/html,<script>alert('xss')</script>)
+				""", category("qna"), author, 0);
+
+		mockMvc.perform(get("/question/qna/detail/1"))
+				.andExpect(status().isOk())
+				.andExpect(content().string(not(containsString("<script>alert"))))
+				.andExpect(content().string(not(containsString("<img src=x onerror="))))
+				.andExpect(content().string(not(containsString("onerror="))))
+				.andExpect(content().string(not(containsString("javascript:alert"))))
+				.andExpect(content().string(not(containsString("data:text/html"))))
+				.andExpect(content().string(containsString("&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;")))
+				.andExpect(content().string(containsString("&lt;img src&#61;x onerror&#61;alert(&#39;xss&#39;)&gt;")))
+				.andExpect(content().string(containsString("href=\"\" rel=\"nofollow\">click</a>")))
+				.andExpect(content().string(containsString("<img src=\"\"")));
+	}
+
+	@Test
 	void questionDetailAnswerPageNumbersStartFromOne() throws Exception {
 		SiteUser author = createUser();
 		Question question = createQuestion("답변 페이지 질문", "질문 내용", category("qna"), author, 0);

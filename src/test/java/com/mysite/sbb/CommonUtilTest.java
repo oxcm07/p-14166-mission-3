@@ -13,7 +13,7 @@ class CommonUtilTest {
 		String html = commonUtil.markdown("<script>alert('xss')</script>\n\n**굵게**");
 
 		assertThat(html).doesNotContain("<script>");
-		assertThat(html).contains("&lt;script&gt;alert('xss')&lt;/script&gt;");
+		assertThat(html).contains("&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;");
 		assertThat(html).contains("<strong>굵게</strong>");
 	}
 
@@ -27,7 +27,16 @@ class CommonUtilTest {
 
 		assertThat(html).contains("href=\"http://example.com\"");
 		assertThat(html).contains("href=\"https://example.com\"");
-		assertThat(html).contains("href=\"mailto:user@example.com\"");
+		assertThat(html).contains("href=\"mailto:user&#64;example.com\"");
+	}
+
+	@Test
+	void markdownKeepsSafeImages() {
+		String html = commonUtil.markdown("![image alt](https://example.com/image.png)");
+
+		assertThat(html).contains("<img");
+		assertThat(html).contains("src=\"https://example.com/image.png\"");
+		assertThat(html).contains("alt=\"image alt\"");
 	}
 
 	@Test
@@ -40,8 +49,25 @@ class CommonUtilTest {
 		assertThat(html).doesNotContain("javascript:");
 		assertThat(html).doesNotContain("data:text/html");
 		assertThat(html).doesNotContain("<script>");
-		assertThat(html).contains("href=\"\">script</a>");
+		assertThat(html).contains("href=\"\" rel=\"nofollow\">script</a>");
 		assertThat(html).contains("<img src=\"\"");
+	}
+
+	@Test
+	void markdownSanitizesRenderedHtmlBeforeOutput() {
+		String html = commonUtil.markdown("""
+				<script>alert('xss')</script>
+				<img src=x onerror=alert('xss')>
+				[click](javascript:alert('xss'))
+				""");
+
+		assertThat(html).doesNotContain("<script>");
+		assertThat(html).doesNotContain("<img src=x onerror=");
+		assertThat(html).doesNotContain("onerror=");
+		assertThat(html).doesNotContain("javascript:");
+		assertThat(html).contains("&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;");
+		assertThat(html).contains("&lt;img src&#61;x onerror&#61;alert(&#39;xss&#39;)&gt;");
+		assertThat(html).contains("href=\"\" rel=\"nofollow\">click</a>");
 	}
 
 	@Test

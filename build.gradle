@@ -39,6 +39,7 @@ dependencies {
     testImplementation 'org.springframework.security:spring-security-test'
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
     implementation("org.commonmark:commonmark:0.28.0")
+    implementation("com.googlecode.owasp-java-html-sanitizer:owasp-java-html-sanitizer:20260313.1")
     implementation 'org.springframework.boot:spring-boot-starter-mail'
 }
 
