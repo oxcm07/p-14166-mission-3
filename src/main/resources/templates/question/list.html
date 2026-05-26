@@ -15,6 +15,7 @@
             <th style="width:50%">제목</th>
             <th>글쓴이</th>
             <th>작성일시</th>
+            <th>조회</th>
             <th>추천</th>
         </tr>
         </thead>
@@ -26,13 +27,15 @@
                     <a th:href="@{/question/{code}/detail/{number}(code=${category.code}, number=${questionNumberMap[question.id]})}"
                        th:text="${question.subject}"></a>
                 </div>
-                <div class="small text-muted mt-1">
+                <div class="text-muted mt-1" style="font-size: 0.8rem;">
                     <span th:text="|답변 : ${#lists.size(question.answerList)}|"></span>
-                    <span class="ms-2" th:text="|댓글 : ${#lists.size(question.commentList)}|"></span>
+                    <span class="mx-1">|</span>
+                    <span th:text="|댓글 : ${#lists.size(question.commentList)}|"></span>
                 </div>
             </td>
             <td><span th:if="${question.author != null}" th:text="${question.author.username}"></span></td>
             <td th:text="${#temporals.format(question.createDate, 'yyyy-MM-dd HH:mm')}"></td>
+            <td th:text="${question.viewCount ?: 0}"></td>
             <td th:text="${#lists.size(question.voter)}"></td>
         </tr>
         </tbody>
