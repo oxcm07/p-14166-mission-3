@@ -7,6 +7,9 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
+@Table(uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"provider", "provider_id"})
+})
 public class SiteUser {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -19,4 +22,9 @@ public class SiteUser {
 
     @Column(unique = true)
     private String email;
+
+    private String provider;
+
+    @Column(name = "provider_id")
+    private String providerId;
 }

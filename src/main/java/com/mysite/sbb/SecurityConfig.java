@@ -1,5 +1,6 @@
 package com.mysite.sbb;
 
+import com.mysite.sbb.user.KakaoOAuth2UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -18,7 +19,7 @@ import org.springframework.security.web.servlet.util.matcher.PathPatternRequestM
 @EnableMethodSecurity(prePostEnabled = true) //@PreAuthorize 사용 위한 설정
 public class SecurityConfig {
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain filterChain(HttpSecurity http, KakaoOAuth2UserService kakaoOAuth2UserService) throws Exception {
         PathPatternRequestMatcher.Builder pathMatcher = PathPatternRequestMatcher.withDefaults();
 
         http
@@ -32,6 +33,11 @@ public class SecurityConfig {
                 .formLogin((formLogin) -> formLogin
                         .loginPage("/user/login")
                         .defaultSuccessUrl("/"))
+                .oauth2Login((oauth2Login) -> oauth2Login
+                        .loginPage("/user/login")
+                        .defaultSuccessUrl("/")
+                        .userInfoEndpoint((userInfoEndpoint) -> userInfoEndpoint
+                                .userService(kakaoOAuth2UserService)))
                 .logout((logout) -> logout
                         .logoutRequestMatcher(pathMatcher.matcher("/user/logout")) //Spring Security 7 권장 경로 매칭
                         .logoutSuccessUrl("/")

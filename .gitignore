@@ -49,3 +49,15 @@ application-local.properties
 src/main/resources/application-local.yaml
 src/main/resources/application-local.yml
 src/main/resources/application-local.properties
+application-secret.yaml
+application-secret.yml
+application-secret.properties
+src/main/resources/application-secret.yaml
+src/main/resources/application-secret.yml
+src/main/resources/application-secret.properties
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore

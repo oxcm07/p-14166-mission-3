@@ -11,3 +11,21 @@ MAIL_PASSWORD=<google-app-password>
 
 Gmail 기본값은 `smtp.gmail.com:587`과 STARTTLS입니다.<br />
 Gmail을 사용하는 경우 계정 비밀번호가 아니라 Google 앱 비밀번호를 사용해야 합니다.
+
+## 카카오 로그인 설정
+
+카카오 개발자 콘솔에서 애플리케이션을 생성한 뒤 REST API 키를 환경 변수로 설정하세요.
+
+```bash
+KAKAO_CLIENT_ID=<kakao-rest-api-key>
+KAKAO_CLIENT_SECRET=<kakao-client-secret>
+```
+
+카카오 Client Secret을 사용하지 않는 설정이라면 `KAKAO_CLIENT_SECRET`은 생략할 수 있습니다.<br />
+카카오 개발자 콘솔의 Redirect URI에는 아래 주소를 등록하세요.
+
+```text
+http://localhost:8080/login/oauth2/code/kakao
+```
+
+배포 환경에서는 도메인에 맞춰 Redirect URI를 추가로 등록해야 합니다.
