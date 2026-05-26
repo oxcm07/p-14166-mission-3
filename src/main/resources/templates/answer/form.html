@@ -1,4 +1,5 @@
 <html layout:decorate="~{layout/base}">
+<th:block layout:fragment="style" th:replace="~{layout/markdown_editor :: css}"></th:block>
 <div layout:fragment="content" class="container">
     <h5 class="my-3 border-bottom pb-2">답변 수정</h5>
     <form th:object="${answerForm}" method="post">
@@ -8,9 +9,10 @@
         <div th:replace="~{layout/form_errors :: formErrorsFragment}"></div>
         <div class="mb-3">
             <label for="content" class="form-label">내용</label>
-            <textarea th:field="*{content}" class="form-control" rows="10"></textarea>
+            <textarea th:field="*{content}" class="form-control markdown-editor" rows="10" data-editor-height="420px"></textarea>
         </div>
         <input type="submit" value="저장하기" class="btn btn-primary my-2">
     </form>
 </div>
+<th:block layout:fragment="script" th:replace="~{layout/markdown_editor :: script}"></th:block>
 </html>

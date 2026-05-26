@@ -12,6 +12,8 @@ MAIL_PASSWORD=<google-app-password>
 Gmail 기본값은 `smtp.gmail.com:587`과 STARTTLS입니다.<br />
 Gmail을 사용하는 경우 계정 비밀번호가 아니라 Google 앱 비밀번호를 사용해야 합니다.
 
+<br />
+
 ## 카카오 로그인 설정
 
 카카오 개발자 콘솔에서 애플리케이션을 생성한 뒤 REST API 키를 환경 변수로 설정하세요.
