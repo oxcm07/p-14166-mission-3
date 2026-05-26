@@ -25,6 +25,17 @@ class MarkdownEditorTest extends AbstractSbbIntegrationTest {
 	}
 
 	@Test
+	void toastUiEditorVendorFilesAreServedFromStaticResources() throws Exception {
+		mockMvc.perform(get("/vendor/toastui-editor/3.2.2/toastui-editor.min.css"))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("toastui-editor")));
+
+		mockMvc.perform(get("/vendor/toastui-editor/3.2.2/toastui-editor-all.min.js"))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("toastui")));
+	}
+
+	@Test
 	void pagesWithoutMarkdownEditingDoNotLoadEditorResources() throws Exception {
 		mockMvc.perform(get("/question/qna/list"))
 				.andExpect(status().isOk())
@@ -37,13 +48,14 @@ class MarkdownEditorTest extends AbstractSbbIntegrationTest {
 		createUser();
 
 		mockMvc.perform(get("/question/create")
-						.param("categoryCode", "qna")
-						.with(user(TEST_USERNAME)))
+				.param("categoryCode", "qna")
+				.with(user(TEST_USERNAME)))
 				.andExpect(status().isOk())
 				.andExpect(view().name("question/form"))
-				.andExpect(content().string(containsString("toastui-editor.min.css")))
-				.andExpect(content().string(containsString("toastui-editor-all.min.js")))
+				.andExpect(content().string(containsString("/vendor/toastui-editor/3.2.2/toastui-editor.min.css")))
+				.andExpect(content().string(containsString("/vendor/toastui-editor/3.2.2/toastui-editor-all.min.js")))
 				.andExpect(content().string(containsString("/js/markdown-editor.js")))
+				.andExpect(content().string(not(containsString("uicdn.toast.com"))))
 				.andExpect(content().string(containsString("class=\"form-control markdown-editor\"")))
 				.andExpect(content().string(containsString("data-editor-height=\"420px\"")));
 	}
@@ -55,12 +67,13 @@ class MarkdownEditorTest extends AbstractSbbIntegrationTest {
 		Answer answer = answerService.create(question, "수정할 답변 내용", author);
 
 		mockMvc.perform(get("/answer/modify/{id}", answer.getId())
-						.with(user(TEST_USERNAME)))
+				.with(user(TEST_USERNAME)))
 				.andExpect(status().isOk())
 				.andExpect(view().name("answer/form"))
-				.andExpect(content().string(containsString("toastui-editor.min.css")))
-				.andExpect(content().string(containsString("toastui-editor-all.min.js")))
+				.andExpect(content().string(containsString("/vendor/toastui-editor/3.2.2/toastui-editor.min.css")))
+				.andExpect(content().string(containsString("/vendor/toastui-editor/3.2.2/toastui-editor-all.min.js")))
 				.andExpect(content().string(containsString("/js/markdown-editor.js")))
+				.andExpect(content().string(not(containsString("uicdn.toast.com"))))
 				.andExpect(content().string(containsString("class=\"form-control markdown-editor\"")))
 				.andExpect(content().string(containsString("수정할 답변 내용")));
 	}
@@ -71,12 +84,13 @@ class MarkdownEditorTest extends AbstractSbbIntegrationTest {
 		createQuestion("에디터 상세 질문", "질문 내용", category("qna"), author, 0);
 
 		mockMvc.perform(get("/question/qna/detail/1")
-						.with(user(TEST_USERNAME)))
+				.with(user(TEST_USERNAME)))
 				.andExpect(status().isOk())
 				.andExpect(view().name("question/detail"))
-				.andExpect(content().string(containsString("toastui-editor.min.css")))
-				.andExpect(content().string(containsString("toastui-editor-all.min.js")))
+				.andExpect(content().string(containsString("/vendor/toastui-editor/3.2.2/toastui-editor.min.css")))
+				.andExpect(content().string(containsString("/vendor/toastui-editor/3.2.2/toastui-editor-all.min.js")))
 				.andExpect(content().string(containsString("/js/markdown-editor.js")))
+				.andExpect(content().string(not(containsString("uicdn.toast.com"))))
 				.andExpect(content().string(containsString("class=\"form-control markdown-editor\"")))
 				.andExpect(content().string(containsString("data-editor-height=\"360px\"")));
 	}
@@ -89,9 +103,10 @@ class MarkdownEditorTest extends AbstractSbbIntegrationTest {
 		mockMvc.perform(get("/question/qna/detail/1"))
 				.andExpect(status().isOk())
 				.andExpect(view().name("question/detail"))
-				.andExpect(content().string(containsString("toastui-editor.min.css")))
-				.andExpect(content().string(containsString("toastui-editor-all.min.js")))
+				.andExpect(content().string(containsString("/vendor/toastui-editor/3.2.2/toastui-editor.min.css")))
+				.andExpect(content().string(containsString("/vendor/toastui-editor/3.2.2/toastui-editor-all.min.js")))
 				.andExpect(content().string(containsString("/js/markdown-editor.js")))
+				.andExpect(content().string(not(containsString("uicdn.toast.com"))))
 				.andExpect(content().string(containsString("disabled class=\"form-control\"")))
 				.andExpect(content().string(not(containsString("disabled class=\"form-control markdown-editor\""))));
 	}

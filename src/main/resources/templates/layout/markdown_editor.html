@@ -1,9 +1,9 @@
 <html>
 <th:block th:fragment="css">
-    <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
+    <link rel="stylesheet" th:href="@{/vendor/toastui-editor/3.2.2/toastui-editor.min.css}">
 </th:block>
 <th:block th:fragment="script">
-    <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
+    <script th:src="@{/vendor/toastui-editor/3.2.2/toastui-editor-all.min.js}"></script>
     <script th:src="@{/js/markdown-editor.js}"></script>
 </th:block>
 </html>
